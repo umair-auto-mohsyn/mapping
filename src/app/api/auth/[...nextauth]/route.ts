@@ -17,10 +17,6 @@ const handler = NextAuth({
             return false; // Deny access for all other domains
         },
     },
-    pages: {
-        signIn: "/auth/signin", // We can customize this later if needed
-        error: "/auth/error",   // Error page for unauthorized domains
-    },
 });
 
 export { handler as GET, handler as POST };
