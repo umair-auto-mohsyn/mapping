@@ -2,7 +2,7 @@ import Papa from "papaparse";
 import fs from "fs";
 import path from "path";
 
-const DATABASE_DIR = path.join(process.cwd(), "..", "Database");
+const DATABASE_DIR = path.join(process.cwd(), "Database");
 const CLIENTS_FILE = path.join(DATABASE_DIR, "Client Coordinates Updates - Sheet1.csv");
 const SERVICES_FILE = path.join(DATABASE_DIR, "Service Delivery Mapping Data - Specefic Sheet Clean.csv");
 
