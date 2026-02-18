@@ -67,7 +67,7 @@ export function getServices(): Service[] {
             primary_contact: row["primary_contact"] || "",
             secondary_contact: row["secondary_contact"] || "",
             opening_hours: row["opening_hours"] || "",
-            image_url: row["image_url"] || "",
+            image_url: (row["image_url"] || "").replace("REPLACED_BY_CODE", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""),
             data_source: row["data_source"] || "",
         }));
     } catch (error) {
