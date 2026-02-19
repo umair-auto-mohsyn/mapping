@@ -222,10 +222,8 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                                                     const origin = `${selectedClient.latitude},${selectedClient.longitude}`;
                                                     const destination = `${selectedService.latitude},${selectedService.longitude}`;
                                                     const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving&dir_action=navigate`;
-                                                    const contactInfo = selectedService.primary_contact ? `\nContact: ${selectedService.primary_contact}` : "";
-                                                    const message = `Hello, here are the directions for ${selectedService.entity_name}${contactInfo} starting from ${selectedClient.firstName} ${selectedClient.lastName}'s location:\n\n${directionsUrl}`;
 
-                                                    navigator.clipboard.writeText(message);
+                                                    navigator.clipboard.writeText(directionsUrl);
                                                     setCopied(true);
                                                     setTimeout(() => setCopied(false), 2000);
                                                 }}
