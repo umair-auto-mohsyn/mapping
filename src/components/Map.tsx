@@ -9,7 +9,7 @@ import {
 } from "@vis.gl/react-google-maps";
 import { Client, Service } from "@/lib/csv";
 import { CATEGORY_COLORS } from "@/lib/utils";
-import { MapPin, RotateCcw, Share2 } from "lucide-react";
+import { MapPin, RotateCcw, Share2, Copy, CheckCircle2 } from "lucide-react";
 
 interface MapProps {
     selectedCity: string;
@@ -45,6 +45,7 @@ function MapCircle({ center, radius }: { center: google.maps.LatLngLiteral; radi
 export default function Map({ selectedCity, selectedClient, filteredServices, radius }: MapProps) {
     const map = useMap();
     const [selectedService, setSelectedService] = useState<DisplayService | null>(null);
+    const [copied, setCopied] = useState(false);
 
     // Manual Spiderfy/Jitter logic for overlapping markers
     const processedServices = useMemo<DisplayService[]>(() => {
@@ -201,25 +202,43 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                                 )}
                                 <div className="pt-2 border-t mt-2 flex flex-col gap-2">
                                     {selectedClient && (
-                                        <button
-                                            onClick={() => {
-                                                const origin = `${selectedClient.latitude},${selectedClient.longitude}`;
-                                                const destination = `${selectedService.latitude},${selectedService.longitude}`;
-                                                const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving&dir_action=navigate`;
-                                                const contactInfo = selectedService.primary_contact ? `\nContact: ${selectedService.primary_contact}` : "";
-                                                const message = `Hello, here are the directions for ${selectedService.entity_name}${contactInfo} starting from ${selectedClient.firstName} ${selectedClient.lastName}'s location:\n\n${directionsUrl}`;
-                                                const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-                                                window.open(whatsappUrl, "_blank");
-                                            }}
-                                            className="flex items-center justify-center gap-2 w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
-                                        >
-                                            <Share2 size={12} strokeWidth={3} /> Share with WhatsApp
-                                        </button>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    const origin = `${selectedClient.latitude},${selectedClient.longitude}`;
+                                                    const destination = `${selectedService.latitude},${selectedService.longitude}`;
+                                                    const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving&dir_action=navigate`;
+                                                    const contactInfo = selectedService.primary_contact ? `\nContact: ${selectedService.primary_contact}` : "";
+                                                    const message = `Hello, here are the directions for ${selectedService.entity_name}${contactInfo} starting from ${selectedClient.firstName} ${selectedClient.lastName}'s location:\n\n${directionsUrl}`;
+                                                    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+                                                    window.open(whatsappUrl, "_blank");
+                                                }}
+                                                className="flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
+                                            >
+                                                <Share2 size={12} strokeWidth={3} /> WhatsApp
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const origin = `${selectedClient.latitude},${selectedClient.longitude}`;
+                                                    const destination = `${selectedService.latitude},${selectedService.longitude}`;
+                                                    const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving&dir_action=navigate`;
+                                                    const contactInfo = selectedService.primary_contact ? `\nContact: ${selectedService.primary_contact}` : "";
+                                                    const message = `Hello, here are the directions for ${selectedService.entity_name}${contactInfo} starting from ${selectedClient.firstName} ${selectedClient.lastName}'s location:\n\n${directionsUrl}`;
+
+                                                    navigator.clipboard.writeText(message);
+                                                    setCopied(true);
+                                                    setTimeout(() => setCopied(false), 2000);
+                                                }}
+                                                className={`flex items-center justify-center gap-2 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95 ${copied ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
+                                            >
+                                                {copied ? (
+                                                    <><CheckCircle2 size={12} strokeWidth={3} /> Copied!</>
+                                                ) : (
+                                                    <><Copy size={12} strokeWidth={3} /> Copy Link</>
+                                                )}
+                                            </button>
+                                        </div>
                                     )}
-                                    <div className="flex justify-between items-center text-[9px] text-gray-400">
-                                        <span>ID: {selectedService.source_id}</span>
-                                        <span className="bg-gray-100 px-1 rounded">Source: {selectedService.data_source}</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
