@@ -205,7 +205,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                                             onClick={() => {
                                                 const origin = `${selectedClient.latitude},${selectedClient.longitude}`;
                                                 const destination = `${selectedService.latitude},${selectedService.longitude}`;
-                                                const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+                                                const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving&dir_action=navigate`;
                                                 const contactInfo = selectedService.primary_contact ? `\nContact: ${selectedService.primary_contact}` : "";
                                                 const message = `Hello, here are the directions for ${selectedService.entity_name}${contactInfo} starting from ${selectedClient.firstName} ${selectedClient.lastName}'s location:\n\n${directionsUrl}`;
                                                 const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
