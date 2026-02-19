@@ -76,12 +76,26 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
 
         if (selectedClient) {
             const pos = { lat: selectedClient.latitude, lng: selectedClient.longitude };
-            map.setCenter(pos);
-            map.panTo(pos);
-            map.setZoom(14);
+
+            if (radius !== "ALL") {
+                // Zoom to fit radius
+                // Approx mapping of radius to zoom level for Google Maps
+                // 5km -> 13, 10km -> 12, 20km -> 11
+                const zoomMap: Record<number, number> = {
+                    5: 13,
+                    10: 12,
+                    20: 11
+                };
+                map.setCenter(pos);
+                map.setZoom(zoomMap[radius as number] || 12);
+            } else {
+                // "ALL" - Show city but zoom out a bit
+                map.setCenter(pos);
+                map.setZoom(12); // Slightly more zoomed out than a specific client focus (14)
+            }
         } else if (selectedCity) {
             // Find services in this city to center
-            const cityServices = filteredServices.filter(s => s.city === selectedCity);
+            const cityServices = filteredServices.filter(s => s.city.toLowerCase() === selectedCity.toLowerCase());
 
             if (cityServices.length > 0) {
                 const lats = cityServices.map(s => s.latitude);
@@ -98,7 +112,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                 map.panTo({ lat: 30.3753, lng: 69.3451 });
             }
         }
-    }, [map, selectedClient, selectedCity]);
+    }, [map, selectedClient, selectedCity, radius]);
 
     return (
         <div className="w-full h-full">
@@ -137,15 +151,15 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                 )}
 
                 {/* Service Markers */}
-                {processedServices.map((service) => (
+                {processedServices.map((service, index) => (
                     <Marker
-                        key={`service-${service.source_id}-${service.entity_name}`}
+                        key={`service-${service.source_id || 'no-id'}-${service.latitude}-${service.longitude}-${index}`}
                         position={service.displayPos}
                         title={service.entity_name}
                         onClick={() => setSelectedService(service)}
                         icon={{
                             path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
-                            fillColor: "#ef4444", // Solid Red
+                            fillColor: CATEGORY_COLORS[service.category] || CATEGORY_COLORS.default,
                             fillOpacity: 1,
                             strokeWeight: 1.5,
                             strokeColor: "#ffffff",

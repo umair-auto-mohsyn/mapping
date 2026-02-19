@@ -37,13 +37,13 @@ export function getClients(): Client[] {
         const result = Papa.parse(fileContent, { header: true, skipEmptyLines: true });
 
         return result.data.map((row: any) => ({
-            firstName: row["[Contacts] First Name"] || "",
-            lastName: row["[Contacts] Last Name"] || "",
-            email: row["[Contacts] Email"] || "",
-            city: row["[Contacts] Serving City"] || "",
+            firstName: (row["[Contacts] First Name"] || "").trim(),
+            lastName: (row["[Contacts] Last Name"] || "").trim(),
+            email: (row["[Contacts] Email"] || "").trim(),
+            city: (row["[Contacts] Serving City"] || "").trim(),
             latitude: parseFloat(row["latitude"]),
             longitude: parseFloat(row["longitude"]),
-            id: row["[Contacts] Email"] || `${row["[Contacts] First Name"]}-${row["[Contacts] Last Name"]}`,
+            id: (row["[Contacts] Email"] || `${row["[Contacts] First Name"]}-${row["[Contacts] Last Name"]}`).trim(),
         }));
     } catch (error) {
         console.error("Error reading clients CSV:", error);
@@ -57,18 +57,18 @@ export function getServices(): Service[] {
         const result = Papa.parse(fileContent, { header: true, skipEmptyLines: true });
 
         return result.data.map((row: any) => ({
-            source_id: row["source_id"] || "",
-            entity_name: row["entity_name"] || "",
-            category: row["category"] || "",
-            city: row["city"] || "",
-            address: row["address"] || "",
+            source_id: (row["source_id"] || "").trim(),
+            entity_name: (row["entity_name"] || "").trim(),
+            category: (row["category"] || "").trim(),
+            city: (row["city"] || "").trim(),
+            address: (row["address"] || "").trim(),
             latitude: parseFloat(row["latitude"]),
             longitude: parseFloat(row["longitude"]),
-            primary_contact: row["primary_contact"] || "",
-            secondary_contact: row["secondary_contact"] || "",
-            opening_hours: row["opening_hours"] || "",
-            image_url: (row["image_url"] || "").replace("REPLACED_BY_CODE", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""),
-            data_source: row["data_source"] || "",
+            primary_contact: (row["primary_contact"] || "").trim(),
+            secondary_contact: (row["secondary_contact"] || "").trim(),
+            opening_hours: (row["opening_hours"] || "").trim(),
+            image_url: (row["image_url"] || "").trim().replace("REPLACED_BY_CODE", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""),
+            data_source: (row["data_source"] || "").trim(),
         }));
     } catch (error) {
         console.error("Error reading services CSV:", error);

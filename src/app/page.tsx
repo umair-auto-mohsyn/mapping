@@ -93,14 +93,14 @@ export default function Home() {
 
         // Filter by city
         if (selectedCity) {
-            services = services.filter((s) => s.city === selectedCity);
+            services = services.filter((s) => s.city.toLowerCase() === selectedCity.toLowerCase());
         } else {
             return []; // Hide markers if no city is selected
         }
 
         // Filter by category
         if (selectedCategory) {
-            services = services.filter((s) => s.category === selectedCategory);
+            services = services.filter((s) => s.category.toLowerCase() === selectedCategory.toLowerCase());
         }
 
         if (selectedRadius !== "ALL" && selectedClient) {
@@ -346,14 +346,6 @@ export default function Home() {
 
                 {/* Floating Admin Buttons */}
                 <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-3">
-                    <button
-                        onClick={() => setIsAdminOpen(true)}
-                        className="bg-white p-3 rounded-2xl shadow-xl hover:bg-gray-50 text-gray-900 transition-all border-2 border-gray-100 group relative flex items-center justify-center"
-                        title="Admin Dashboard"
-                    >
-                        <Settings size={20} className="text-gray-800" />
-                        <span className="absolute right-full mr-3 bg-gray-900 text-white text-[10px] font-black py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-lg">Admin</span>
-                    </button>
                     <button
                         onClick={() => setIsAdminOpen(true)}
                         className="bg-blue-600 p-3 rounded-2xl shadow-xl hover:bg-blue-700 text-white transition-all border-2 border-blue-500 group relative flex items-center justify-center"
