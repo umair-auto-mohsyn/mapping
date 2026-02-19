@@ -316,14 +316,8 @@ export default function Home() {
                     </button>
                 </div>
 
-                {/* Compact Status Bar */}
                 <div className="p-3 bg-gray-900 text-white border-t border-white/10 flex justify-between items-center shrink-0">
                     <span className="text-[9px] text-gray-400 uppercase tracking-widest font-black">Status: {filteredServices.length} Results</span>
-                    <Settings
-                        size={16}
-                        className="text-gray-400 cursor-pointer hover:text-white"
-                        onClick={() => setIsAdminOpen(true)}
-                    />
                 </div>
             </div>
 

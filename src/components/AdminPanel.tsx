@@ -135,9 +135,20 @@ export default function AdminPanel({ onClose, clients, services, onDataUpdate }:
                                             <label className="text-xs font-bold text-gray-500 uppercase">Email (System ID)</label>
                                             <input type="email" placeholder="john.doe@example.com" className="border-2 border-gray-100 p-3 rounded-xl w-full focus:border-blue-600 outline-none text-gray-900 font-bold" value={editingClient.email || ""} onChange={e => setEditingClient({ ...editingClient, email: e.target.value })} required />
                                         </div>
-                                        <div className="space-y-1">
+                                        <div className="col-span-1 space-y-1">
                                             <label className="text-xs font-bold text-gray-500 uppercase">Primary City</label>
-                                            <input type="text" placeholder="Karachi" className="border-2 border-gray-100 p-3 rounded-xl w-full focus:border-blue-600 outline-none text-gray-900 font-bold" value={editingClient.city || ""} onChange={e => setEditingClient({ ...editingClient, city: e.target.value })} required />
+                                            <select
+                                                className="border-2 border-gray-100 p-3 rounded-xl w-full focus:border-blue-600 outline-none text-gray-900 font-bold bg-white"
+                                                value={editingClient.city || ""}
+                                                onChange={e => setEditingClient({ ...editingClient, city: e.target.value })}
+                                                required
+                                            >
+                                                <option value="" disabled>Select City</option>
+                                                <option value="Lahore">Lahore</option>
+                                                <option value="Islamabad">Islamabad</option>
+                                                <option value="Karachi">Karachi</option>
+                                                <option value="Rawalpindi">Rawalpindi</option>
+                                            </select>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3 space-y-0">
                                             <div className="space-y-1">
