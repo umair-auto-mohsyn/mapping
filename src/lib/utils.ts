@@ -22,12 +22,13 @@ export function calculateDistance(
 }
 
 export const CATEGORY_COLORS: Record<string, string> = {
-    Hospital: "#ef4444",
+    Hospital: "#ff0000",
     Clinic: "#f97316",
     Pharmacy: "#10b981",
-    "Police Station": "#3b82f6",
+    "Police Station": "#ff0000",
     "Fire Station": "#dc2626",
-    "Ambulance Service": "#fca5a5",
+    "Ambulance Service": "#ff0000",
+    "Burn Emergency Hospital": "#ff0000",
     "Medical Store": "#2dd4bf",
     Hardware: "#71717a",
     Laboratory: "#be185d",

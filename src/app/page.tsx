@@ -54,7 +54,7 @@ export default function Home() {
     // Filter state
     const [selectedCity, setSelectedCity] = useState<string>("");
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<string>("");
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedRadius, setSelectedRadius] = useState<number | "ALL">("ALL");
 
     // Filter sequences
@@ -99,8 +99,10 @@ export default function Home() {
         }
 
         // Filter by category
-        if (selectedCategory) {
-            services = services.filter((s) => s.category.toLowerCase() === selectedCategory.toLowerCase());
+        if (selectedCategories.length > 0) {
+            services = services.filter((s) =>
+                selectedCategories.some(cat => cat.toLowerCase() === s.category.toLowerCase())
+            );
         }
 
         if (selectedRadius !== "ALL" && selectedClient) {
@@ -117,7 +119,7 @@ export default function Home() {
         }
 
         return services;
-    }, [data.services, selectedCity, selectedCategory, selectedClient, selectedRadius]);
+    }, [data.services, selectedCity, selectedCategories, selectedClient, selectedRadius]);
 
     const resetFilters = () => {
         setCitySearch("");
@@ -125,7 +127,7 @@ export default function Home() {
         setCategorySearch("");
         setSelectedCity("");
         setSelectedClient(null);
-        setSelectedCategory("");
+        setSelectedCategories([]);
         setSelectedRadius("ALL");
     };
 
@@ -263,26 +265,35 @@ export default function Home() {
                             </div>
                             <div className="max-h-32 overflow-y-auto border-2 border-gray-50 rounded-xl bg-gray-50/20 p-1 space-y-0.5 shadow-inner scrollbar-thin scrollbar-thumb-gray-200">
                                 <button
-                                    onClick={() => setSelectedCategory("")}
-                                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${selectedCategory === "" ? "bg-gray-900 text-white shadow-sm" : "text-gray-500 hover:bg-white hover:shadow-sm"}`}
+                                    onClick={() => setSelectedCategories([])}
+                                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${selectedCategories.length === 0 ? "bg-gray-900 text-white shadow-sm" : "text-gray-500 hover:bg-white hover:shadow-sm"}`}
                                 >
                                     All Categories
                                 </button>
-                                {filteredCategoriesList.map((cat) => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => setSelectedCategory(cat)}
-                                        className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedCategory === cat ? "text-white shadow-sm" : "text-gray-700 hover:bg-white hover:shadow-sm"}`}
-                                        style={{
-                                            backgroundColor: selectedCategory === cat ? (CATEGORY_COLORS[cat] || "#2563eb") : undefined,
-                                        }}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span className="truncate">{cat}</span>
-                                            {selectedCategory === cat && <Check size={12} strokeWidth={4} />}
-                                        </div>
-                                    </button>
-                                ))}
+                                {filteredCategoriesList.map((cat) => {
+                                    const isSelected = selectedCategories.includes(cat);
+                                    return (
+                                        <button
+                                            key={cat}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    setSelectedCategories(selectedCategories.filter(c => c !== cat));
+                                                } else {
+                                                    setSelectedCategories([...selectedCategories, cat]);
+                                                }
+                                            }}
+                                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isSelected ? "text-white shadow-sm" : "text-gray-700 hover:bg-white hover:shadow-sm"}`}
+                                            style={{
+                                                backgroundColor: isSelected ? (CATEGORY_COLORS[cat] || "#2563eb") : undefined,
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="truncate">{cat}</span>
+                                                {isSelected && <Check size={12} strokeWidth={4} />}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
