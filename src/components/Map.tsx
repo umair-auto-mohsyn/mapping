@@ -219,11 +219,9 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                                             </button>
                                             <button
                                                 onClick={() => {
-                                                    const origin = `${selectedClient.latitude},${selectedClient.longitude}`;
-                                                    const destination = `${selectedService.latitude},${selectedService.longitude}`;
-                                                    const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving&dir_action=navigate`;
+                                                    const locationUrl = `https://www.google.com/maps/search/?api=1&query=${selectedService.latitude},${selectedService.longitude}${selectedService.source_id ? `&query_place_id=${selectedService.source_id}` : ""}`;
 
-                                                    navigator.clipboard.writeText(directionsUrl);
+                                                    navigator.clipboard.writeText(locationUrl);
                                                     setCopied(true);
                                                     setTimeout(() => setCopied(false), 2000);
                                                 }}
