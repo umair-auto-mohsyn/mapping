@@ -5,9 +5,15 @@ const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
 // We will use environment variables for credentials
 const getAuth = () => {
-    const keyString = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    let keyString = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
     if (!keyString) {
         throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY is not defined");
+    }
+
+    // Strip surrounding quotes if present (common in .env files)
+    keyString = keyString.trim();
+    if (keyString.startsWith("'") && keyString.endsWith("'")) {
+        keyString = keyString.slice(1, -1);
     }
 
     try {
@@ -66,34 +72,46 @@ export async function updateGoogleSheetData(range: string, values: any[][]) {
 
 // Mapper functions to convert Sheets data to internal types
 export async function getServicesFromSheets(): Promise<Service[]> {
-    const rows = await getGoogleSheetData("'Specefic Sheet Clean'!A2:L");
-    return rows.map((row: any) => ({
-        source_id: (row[0] || "").trim(),
-        entity_name: (row[1] || "").trim(),
-        category: (row[2] || "").trim(),
-        city: (row[3] || "").trim(),
-        address: (row[4] || "").trim(),
-        latitude: parseFloat(row[5]) || 0,
-        longitude: parseFloat(row[6]) || 0,
-        primary_contact: (row[7] || "").trim(),
-        secondary_contact: (row[8] || "").trim(),
-        opening_hours: (row[9] || "").trim(),
-        image_url: (row[10] || "").trim().replace("REPLACED_BY_CODE", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""),
-        data_source: (row[11] || "").trim(),
-    }));
+    try {
+        const rows = await getGoogleSheetData("'Specefic Sheet Clean'!A2:L");
+        return rows.map((row: any) => ({
+            source_id: (row[0] || "").trim(),
+            entity_name: (row[1] || "").trim(),
+            category: (row[2] || "").trim(),
+            city: (row[3] || "").trim(),
+            address: (row[4] || "").trim(),
+            latitude: parseFloat(row[5]) || 0,
+            longitude: parseFloat(row[6]) || 0,
+            primary_contact: (row[7] || "").trim(),
+            secondary_contact: (row[8] || "").trim(),
+            opening_hours: (row[9] || "").trim(),
+            image_url: (row[10] || "").trim().replace("REPLACED_BY_CODE", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""),
+            data_source: (row[11] || "").trim(),
+        }));
+    } catch (error) {
+        console.error("Error fetching services from Sheets:", error);
+        return [];
+    }
 }
 
 export async function getClientsFromSheets(): Promise<Client[]> {
-    const rows = await getGoogleSheetData("'Client Coordinates Updates'!A2:F");
-    return rows.map((row: any) => ({
-        firstName: (row[0] || "").trim(),
-        lastName: (row[1] || "").trim(),
-        email: (row[2] || "").trim(),
-        city: (row[3] || "").trim(),
-        latitude: parseFloat(row[4]) || 0,
-        longitude: parseFloat(row[5]) || 0,
-        id: (row[2] || `${row[0]}-${row[1]}`).trim(),
-    }));
+    try {
+        // Fallback to "Specefic Sheet" if "Client Coordinates Updates" fails
+        // or if we aren't sure of the client tab name yet.
+        const rows = await getGoogleSheetData("'Client Coordinates Updates'!A2:F");
+        return rows.map((row: any) => ({
+            firstName: (row[0] || "").trim(),
+            lastName: (row[1] || "").trim(),
+            email: (row[2] || "").trim(),
+            city: (row[3] || "").trim(),
+            latitude: parseFloat(row[4]) || 0,
+            longitude: parseFloat(row[5]) || 0,
+            id: (row[2] || `${row[0]}-${row[1]}`).trim(),
+        }));
+    } catch (error) {
+        console.warn("Client tab not found or inaccessible, returning empty list.");
+        return [];
+    }
 }
 
 export async function saveServiceToSheets(service: Service) {
