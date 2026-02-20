@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServices } from "@/lib/csv";
+import { getServicesFromSheets } from "@/lib/google-sheets";
 import { CATEGORY_TO_GOOGLE_TYPES, mapGoogleTypeToCategory } from "@/lib/google-places";
 
 export async function POST(request: Request) {
@@ -12,8 +12,8 @@ export async function POST(request: Request) {
         }
 
         // Get existing source_ids to filter duplicates
-        const existingServices = getServices();
-        const existingSourceIds = new Set(existingServices.map(s => s.source_id));
+        const existingServices = await getServicesFromSheets();
+        const existingSourceIds = new Set(existingServices.map((s: any) => s.source_id));
 
         const allDiscoveredPlaces: any[] = [];
         const seenPlaceIds = new Set<string>();

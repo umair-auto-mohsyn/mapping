@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getClients, getServices } from "@/lib/csv";
+import { getClientsFromSheets, getServicesFromSheets } from "@/lib/google-sheets";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
     try {
-        const clients = getClients();
-        const services = getServices();
+        const clients = await getClientsFromSheets();
+        const services = await getServicesFromSheets();
 
         // Get unique cities and categories for filters
         const cities = Array.from(new Set([
@@ -25,6 +25,7 @@ export async function GET() {
             categories
         });
     } catch (error) {
+        console.error("Fetch data error:", error);
         return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
     }
 }
