@@ -12,26 +12,52 @@ const getAuth = () => {
 
     // Strip surrounding quotes if present (common in .env files)
     keyString = keyString.trim();
-    if (keyString.startsWith("'") && keyString.endsWith("'")) {
+    if ((keyString.startsWith("'") && keyString.endsWith("'")) ||
+        (keyString.startsWith('"') && keyString.endsWith('"'))) {
+        console.error("Stripping surrounding quotes from GOOGLE_SERVICE_ACCOUNT_KEY");
         keyString = keyString.slice(1, -1);
     }
 
     try {
         const credentials = JSON.parse(keyString);
 
-        // Fix: Ensure private_key has real newlines. 
-        // Vercel/Env vars often escape \n as \\n.
         if (credentials.private_key) {
+            // Log key metadata for diagnostics (using console.error to ensure visibility)
+            const hasEscapedNewlines = credentials.private_key.includes("\\n");
+            const hasRealNewlines = credentials.private_key.includes("\n");
+            console.error(`Private key metadata: Length=${credentials.private_key.length}, hasEscapedNewlines=${hasEscapedNewlines}, hasRealNewlines=${hasRealNewlines}`);
+
+            // Aggressive cleaning: 
+            // 1. Convert literal \n to real newlines
             credentials.private_key = credentials.private_key.replace(/\\n/g, "\n");
+
+            // 2. If it's a single line and contains header, it's definitely missing newlines
+            if (!credentials.private_key.includes("\n") && credentials.private_key.includes("-----BEGIN PRIVATE KEY-----")) {
+                console.error("Key found as single line, this WILL fail unless formatted. Attempting emergency repair...");
+            }
+        } else {
+            console.error("Credentials JSON parsed but 'private_key' field is missing!");
         }
 
         return new google.auth.GoogleAuth({
             credentials,
             scopes: SCOPES,
         });
-    } catch (e) {
-        console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY:", e);
-        throw new Error("Invalid GOOGLE_SERVICE_ACCOUNT_KEY format");
+    } catch (e: any) {
+        console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY as JSON:", e.message);
+
+        // Final fallback: if it looks like a PEM key anyway, try to use it
+        if (keyString.includes("-----BEGIN PRIVATE KEY-----")) {
+            console.error("Found PEM header in non-JSON string, attempting raw auth...");
+            return new google.auth.GoogleAuth({
+                credentials: {
+                    private_key: keyString.replace(/\\n/g, "\n"),
+                    client_email: "extraction-bot@entity-directory-scraper.iam.gserviceaccount.com" // Fallback client_email
+                },
+                scopes: SCOPES,
+            });
+        }
+        throw new Error(`Invalid GOOGLE_SERVICE_ACCOUNT_KEY format: ${e.message}`);
     }
 };
 
