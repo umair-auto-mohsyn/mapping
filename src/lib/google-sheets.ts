@@ -18,6 +18,13 @@ const getAuth = () => {
 
     try {
         const credentials = JSON.parse(keyString);
+
+        // Fix: Ensure private_key has real newlines. 
+        // Vercel/Env vars often escape \n as \\n.
+        if (credentials.private_key) {
+            credentials.private_key = credentials.private_key.replace(/\\n/g, "\n");
+        }
+
         return new google.auth.GoogleAuth({
             credentials,
             scopes: SCOPES,
