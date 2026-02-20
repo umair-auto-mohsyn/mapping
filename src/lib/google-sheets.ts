@@ -32,13 +32,20 @@ const getAuth = () => {
             if (key.includes(header) && key.includes(footer)) {
                 const startIndex = key.indexOf(header) + header.length;
                 const endIndex = key.indexOf(footer);
-                const base64Part = key.substring(startIndex, endIndex).replace(/\s/g, "");
 
-                // Reconstruct with guaranteed good formatting
+                // Hyper-aggressive: Strip EVERYTHING except valid Base64 characters
+                let base64Part = key.substring(startIndex, endIndex).replace(/[^A-Za-z0-9+/=]/g, "");
+
+                // Fix padding: Base64 length MUST be a multiple of 4
+                while (base64Part.length % 4 !== 0) {
+                    base64Part += "=";
+                }
+
+                // Reconstruct with guaranteed good formatting (header, body, footer)
                 credentials.private_key = `${header}\n${base64Part}\n${footer}`;
 
                 console.error(`PEM Reconstructed: OriginalLength=${key.length}, CleanBase64Length=${base64Part.length}`);
-                console.error(`Safe Metadata: Start=${base64Part.substring(0, 5)}... End=...${base64Part.substring(base64Part.length - 5)}`);
+                console.error(`Safe Metadata: [${base64Part.substring(0, 10)}...] [...${base64Part.substring(base64Part.length - 10)}]`);
             } else {
                 console.error("Key guards missing! PEM might be corrupted.");
                 // Fallback: just try to fix newlines if guards are missing
