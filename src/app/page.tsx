@@ -383,6 +383,7 @@ export default function Home() {
                     selectedCity={selectedCity}
                     selectedClient={selectedClient}
                     filteredServices={filteredServices}
+                    allServices={data.services}
                     discoveredServices={discoveredServices}
                     radius={selectedRadius}
                     onDataUpdate={fetchData}

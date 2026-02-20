@@ -77,11 +77,15 @@ export interface GooglePlaceResult {
 export function normalizeGooglePlace(
     place: GooglePlaceResult,
     internalCategory: string,
-    city: string
+    selectedCity: string
 ): Service {
-    // Extract city from address_components if available
-    let extractedCity = city;
-    if (place.address_components) {
+    // Determine the best city name: prefer the selected city if the address contains it
+    let extractedCity = selectedCity;
+    const address = (place.formatted_address || place.vicinity || "").toLowerCase();
+    const cityLower = selectedCity.toLowerCase();
+
+    // If the address doesn't contain the selected city, try to extract it from Google
+    if (!address.includes(cityLower) && place.address_components) {
         const cityComp = place.address_components.find(comp =>
             comp.types.includes("locality") || comp.types.includes("administrative_area_level_2")
         );
@@ -90,10 +94,13 @@ export function normalizeGooglePlace(
         }
     }
 
+    // Map the internal category (fallback to preference)
+    const category = mapGoogleTypeToCategory(place.types || [], internalCategory);
+
     return {
         source_id: place.place_id,
         entity_name: place.name,
-        category: internalCategory,
+        category: category,
         city: extractedCity,
         address: place.formatted_address || place.vicinity || "",
         latitude: place.geometry.location.lat,

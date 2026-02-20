@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServices } from "@/lib/csv";
-import { CATEGORY_TO_GOOGLE_TYPES } from "@/lib/google-places";
+import { CATEGORY_TO_GOOGLE_TYPES, mapGoogleTypeToCategory } from "@/lib/google-places";
 
 export async function POST(request: Request) {
     try {
@@ -48,9 +48,12 @@ export async function POST(request: Request) {
             if (data.results) {
                 data.results.forEach((place: any) => {
                     if (!existingSourceIds.has(place.place_id) && !seenPlaceIds.has(place.place_id)) {
+                        // Better category mapping: try to find the best match or fallback to the search category
+                        const mappedCategory = mapGoogleTypeToCategory(place.types, categories[0]);
+
                         allDiscoveredPlaces.push({
                             ...place,
-                            internalCategory: categories[0] // Assign the first matching category for now
+                            internalCategory: mappedCategory
                         });
                         seenPlaceIds.add(place.place_id);
                     }

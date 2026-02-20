@@ -16,6 +16,7 @@ interface MapProps {
     selectedCity: string;
     selectedClient: Client | null;
     filteredServices: Service[];
+    allServices: Service[];
     discoveredServices?: any[];
     radius: number | "ALL";
     onDataUpdate?: () => Promise<any>;
@@ -45,7 +46,7 @@ function MapCircle({ center, radius }: { center: google.maps.LatLngLiteral; radi
     return null;
 }
 
-export default function Map({ selectedCity, selectedClient, filteredServices, discoveredServices = [], radius, onDataUpdate }: MapProps) {
+export default function Map({ selectedCity, selectedClient, filteredServices, allServices, discoveredServices = [], radius, onDataUpdate }: MapProps) {
     const map = useMap();
     const [selectedService, setSelectedService] = useState<DisplayService | null>(null);
     const [selectedDiscoveredPlace, setSelectedDiscoveredPlace] = useState<any | null>(null);
@@ -80,11 +81,12 @@ export default function Map({ selectedCity, selectedClient, filteredServices, di
     const processedDiscovered = useMemo(() => {
         const locationMap: { [key: string]: number } = {};
 
-        // Filter out discovered places that are already in filteredServices
-        const existingSourceIds = new Set(filteredServices.map(s => s.source_id));
-        const filteredDiscovered = discoveredServices.filter(p => !existingSourceIds.has(p.place_id));
+        // Filter out discovered places that are already in any existing service
+        const allSourceIds = new Set(allServices.map(s => s.source_id));
+        const filteredDiscovered = discoveredServices.filter(p => !allSourceIds.has(p.place_id));
 
         // Account for existing services to avoid overlapping with them too
+        // (Use filteredServices for jitter calculation to only jitter against visible ones)
         filteredServices.forEach(s => {
             const posKey = `${s.latitude.toFixed(6)},${s.longitude.toFixed(6)}`;
             locationMap[posKey] = (locationMap[posKey] || 0) + 1;
