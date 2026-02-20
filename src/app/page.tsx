@@ -43,11 +43,23 @@ export default function Home() {
     const [categorySearch, setCategorySearch] = useState("");
 
     const fetchData = async () => {
-        const res = await fetch("/api/data");
-        const d = await res.json();
-        setData(d);
-        setLoading(false);
-        return d;
+        try {
+            const res = await fetch("/api/data");
+            const d = await res.json();
+            if (d.error) {
+                console.error("API error:", d.error);
+                setData({ clients: [], services: [], cities: [], categories: [] });
+                setLoading(false);
+                return d;
+            }
+            setData(d);
+            setLoading(false);
+            return d;
+        } catch (e) {
+            console.error("Fetch error:", e);
+            setData({ clients: [], services: [], cities: [], categories: [] });
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -404,8 +416,8 @@ export default function Home() {
                 {isAdminOpen && (
                     <AdminPanel
                         onClose={() => setIsAdminOpen(false)}
-                        clients={data.clients}
-                        services={data.services}
+                        clients={data.clients || []}
+                        services={data.services || []}
                         onDataUpdate={fetchData}
                     />
                 )}
