@@ -1,4 +1,4 @@
-import { Service } from "./csv";
+import { Service } from "@/types";
 
 export const CATEGORY_TO_GOOGLE_TYPES: Record<string, string[]> = {
     "Hospital": ["hospital"],
