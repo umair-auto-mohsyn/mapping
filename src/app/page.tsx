@@ -34,6 +34,8 @@ export default function Home() {
     const [loading, setLoading] = useState(true);
     const [isAdminOpen, setIsAdminOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [discoveredServices, setDiscoveredServices] = useState<any[]>([]);
+    const [isDiscovering, setIsDiscovering] = useState(false);
 
     // Field-specific search states
     const [citySearch, setCitySearch] = useState("");
@@ -121,6 +123,39 @@ export default function Home() {
         return services;
     }, [data.services, selectedCity, selectedCategories, selectedClient, selectedRadius]);
 
+    // Discovery logic
+    useEffect(() => {
+        const discoverPlaces = async () => {
+            if (selectedClient && selectedRadius !== "ALL" && selectedCategories.length > 0) {
+                setIsDiscovering(true);
+                try {
+                    const res = await fetch("/api/discover", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            lat: selectedClient.latitude,
+                            lng: selectedClient.longitude,
+                            radius: selectedRadius,
+                            categories: selectedCategories,
+                            city: selectedCity
+                        })
+                    });
+                    const d = await res.json();
+                    setDiscoveredServices(d.results || []);
+                } catch (error) {
+                    console.error("Discovery error:", error);
+                } finally {
+                    setIsDiscovering(false);
+                }
+            } else {
+                setDiscoveredServices([]);
+            }
+        };
+
+        const timer = setTimeout(discoverPlaces, 500); // Debounce
+        return () => clearTimeout(timer);
+    }, [selectedClient, selectedRadius, selectedCategories, selectedCity]);
+
     const resetFilters = () => {
         setCitySearch("");
         setClientSearch("");
@@ -129,6 +164,7 @@ export default function Home() {
         setSelectedClient(null);
         setSelectedCategories([]);
         setSelectedRadius("ALL");
+        setDiscoveredServices([]);
     };
 
     if (loading) {
@@ -346,7 +382,9 @@ export default function Home() {
                     selectedCity={selectedCity}
                     selectedClient={selectedClient}
                     filteredServices={filteredServices}
+                    discoveredServices={discoveredServices}
                     radius={selectedRadius}
+                    onDataUpdate={fetchData}
                 />
 
                 {/* Floating Admin Buttons */}

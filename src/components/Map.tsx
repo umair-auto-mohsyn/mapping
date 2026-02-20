@@ -9,13 +9,16 @@ import {
 } from "@vis.gl/react-google-maps";
 import { Client, Service } from "@/lib/csv";
 import { CATEGORY_COLORS } from "@/lib/utils";
-import { MapPin, RotateCcw, Share2, Copy, CheckCircle2 } from "lucide-react";
+import { MapPin, RotateCcw, Share2, Copy, CheckCircle2, Plus, Loader2 } from "lucide-react";
+import { normalizeGooglePlace } from "@/lib/google-places";
 
 interface MapProps {
     selectedCity: string;
     selectedClient: Client | null;
     filteredServices: Service[];
+    discoveredServices?: any[];
     radius: number | "ALL";
+    onDataUpdate?: () => Promise<void>;
 }
 
 interface DisplayService extends Service {
@@ -42,9 +45,11 @@ function MapCircle({ center, radius }: { center: google.maps.LatLngLiteral; radi
     return null;
 }
 
-export default function Map({ selectedCity, selectedClient, filteredServices, radius }: MapProps) {
+export default function Map({ selectedCity, selectedClient, filteredServices, discoveredServices = [], radius, onDataUpdate }: MapProps) {
     const map = useMap();
     const [selectedService, setSelectedService] = useState<DisplayService | null>(null);
+    const [selectedDiscoveredPlace, setSelectedDiscoveredPlace] = useState<any | null>(null);
+    const [isEnriching, setIsEnriching] = useState(false);
     const [copied, setCopied] = useState(false);
 
     // Manual Spiderfy/Jitter logic for overlapping markers
@@ -70,6 +75,69 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
             return { ...service, displayPos: { lat, lng } };
         });
     }, [filteredServices]);
+
+    const processedDiscovered = useMemo(() => {
+        const locationMap: { [key: string]: number } = {};
+
+        // Account for existing services to avoid overlapping with them too
+        filteredServices.forEach(s => {
+            const posKey = `${s.latitude.toFixed(6)},${s.longitude.toFixed(6)}`;
+            locationMap[posKey] = (locationMap[posKey] || 0) + 1;
+        });
+
+        return discoveredServices.map((place) => {
+            const posKey = `${place.geometry.location.lat.toFixed(6)},${place.geometry.location.lng.toFixed(6)}`;
+            locationMap[posKey] = (locationMap[posKey] || 0) + 1;
+            const count = locationMap[posKey];
+
+            let lat = place.geometry.location.lat;
+            let lng = place.geometry.location.lng;
+
+            if (count > 1) {
+                const angle = (count - 1) * (360 / 8) * (Math.PI / 180);
+                const spread = 0.0001 * (1 + Math.floor((count - 1) / 8));
+                lat += Math.sin(angle) * spread;
+                lng += Math.cos(angle) * spread;
+            }
+
+            return { ...place, displayPos: { lat, lng } };
+        });
+    }, [discoveredServices, filteredServices]);
+
+    const handleEnrichAndSave = async (place: any) => {
+        setIsEnriching(true);
+        try {
+            // STEP 5 — Fetch Details ONLY ON CLICK
+            const detailsRes = await fetch(`/api/place-details?place_id=${place.place_id}`);
+            const detailsData = await detailsRes.json();
+
+            if (detailsData.error) throw new Error(detailsData.error);
+
+            // STEP 6 — Normalize Data
+            const normalized = normalizeGooglePlace(
+                detailsData.result,
+                place.internalCategory,
+                selectedCity
+            );
+
+            // STEP 7 — Add to Database
+            const saveRes = await fetch("/api/services", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(normalized)
+            });
+
+            if (saveRes.ok) {
+                setSelectedDiscoveredPlace(null);
+                if (onDataUpdate) await onDataUpdate();
+            }
+        } catch (error) {
+            console.error("Enrichment error:", error);
+            alert("Failed to add service to database");
+        } finally {
+            setIsEnriching(false);
+        }
+    };
 
     // Center map logic
     useEffect(() => {
@@ -170,6 +238,26 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                     />
                 ))}
 
+                {/* Discovered Markers (Yellow) */}
+                {processedDiscovered.map((place) => (
+                    <Marker
+                        key={`discovered-${place.place_id}`}
+                        position={place.displayPos}
+                        title={place.name}
+                        onClick={() => setSelectedDiscoveredPlace(place)}
+                        zIndex={1000}
+                        icon={{
+                            path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+                            fillColor: "#eab308", // yellow-500
+                            fillOpacity: 1,
+                            strokeWeight: 1.5,
+                            strokeColor: "#ffffff",
+                            scale: 1.2,
+                            anchor: new google.maps.Point(12, 22),
+                        }}
+                    />
+                ))}
+
                 {/* Info Window */}
                 {selectedService && (
                     <InfoWindow
@@ -235,6 +323,44 @@ export default function Map({ selectedCity, selectedClient, filteredServices, ra
                                             </button>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    </InfoWindow>
+                )}
+
+                {/* Discovered Info Window */}
+                {selectedDiscoveredPlace && (
+                    <InfoWindow
+                        position={selectedDiscoveredPlace.displayPos}
+                        onCloseClick={() => setSelectedDiscoveredPlace(null)}
+                    >
+                        <div className="p-3 max-w-[280px] text-sm">
+                            <div className="flex justify-between items-start border-b pb-1 mb-2">
+                                <h3 className="font-bold text-gray-900 leading-tight">{selectedDiscoveredPlace.name}</h3>
+                                <span className="bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0 ml-2">New</span>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-xs font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md inline-block">
+                                    {selectedDiscoveredPlace.internalCategory}
+                                </p>
+                                <p className="text-[11px] text-gray-600 leading-snug">
+                                    <MapPin size={10} className="inline mr-1" /> {selectedDiscoveredPlace.vicinity}
+                                </p>
+
+                                <div className="pt-2 border-t mt-2">
+                                    <button
+                                        onClick={() => handleEnrichAndSave(selectedDiscoveredPlace)}
+                                        disabled={isEnriching}
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
+                                    >
+                                        {isEnriching ? (
+                                            <><Loader2 size={12} className="animate-spin" /> Adding...</>
+                                        ) : (
+                                            <><Plus size={12} strokeWidth={3} /> Add to Database</>
+                                        )}
+                                    </button>
+                                    <p className="text-[9px] text-gray-400 text-center mt-2 italic font-medium">Click to fetch phone & hours automatically</p>
                                 </div>
                             </div>
                         </div>
