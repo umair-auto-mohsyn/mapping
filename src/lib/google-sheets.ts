@@ -34,12 +34,36 @@ export async function getGoogleSheetData(range: string) {
     const auth = getAuth();
     const sheets = google.sheets({ version: "v4", auth });
 
-    const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range,
-    });
+    console.log(`Fetching data from Sheet ID: ${SHEET_ID}, Range: ${range}`);
 
-    return response.data.values || [];
+    try {
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range,
+        });
+        const rows = response.data.values || [];
+        console.log(`Successfully fetched ${rows.length} rows from range: ${range}`);
+        return rows;
+    } catch (error: any) {
+        console.error(`Error fetching data from range ${range}:`, error.message);
+        // If it's a 404/400, it might be a tab name mismatch. Let's list tabs to help diagnostics.
+        await logSpreadsheetMetadata();
+        throw error;
+    }
+}
+
+async function logSpreadsheetMetadata() {
+    try {
+        const auth = getAuth();
+        const sheets = google.sheets({ version: "v4", auth });
+        const metadata = await sheets.spreadsheets.get({
+            spreadsheetId: SHEET_ID,
+        });
+        const tabs = metadata.data.sheets?.map(s => s.properties?.title) || [];
+        console.log("Available tabs in this spreadsheet:", tabs.join(", "));
+    } catch (e: any) {
+        console.error("Failed to fetch spreadsheet metadata:", e.message);
+    }
 }
 
 export async function appendGoogleSheetData(range: string, values: any[][]) {

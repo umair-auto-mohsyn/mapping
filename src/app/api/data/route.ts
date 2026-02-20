@@ -18,6 +18,9 @@ export async function GET() {
             services.map(s => s.category)
         )).filter(Boolean).sort();
 
+        console.log(`API Data: ${clients.length} clients, ${services.length} services found.`);
+        console.log(`Filtered Cities: ${cities.length}, Categories: ${categories.length}`);
+
         return NextResponse.json({
             clients,
             services,
