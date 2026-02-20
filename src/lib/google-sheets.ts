@@ -22,18 +22,27 @@ const getAuth = () => {
         const credentials = JSON.parse(keyString);
 
         if (credentials.private_key) {
-            // Log key metadata for diagnostics (using console.error to ensure visibility)
-            const hasEscapedNewlines = credentials.private_key.includes("\\n");
-            const hasRealNewlines = credentials.private_key.includes("\n");
-            console.error(`Private key metadata: Length=${credentials.private_key.length}, hasEscapedNewlines=${hasEscapedNewlines}, hasRealNewlines=${hasRealNewlines}`);
+            // THE ULTIMATE CLEANER: Reconstruct PEM from bits to bypass mangling
+            let key = credentials.private_key.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
 
-            // Aggressive cleaning: 
-            // 1. Convert literal \n to real newlines
-            credentials.private_key = credentials.private_key.replace(/\\n/g, "\n");
+            // Extract the actual base64 content between guards
+            const header = "-----BEGIN PRIVATE KEY-----";
+            const footer = "-----END PRIVATE KEY-----";
 
-            // 2. If it's a single line and contains header, it's definitely missing newlines
-            if (!credentials.private_key.includes("\n") && credentials.private_key.includes("-----BEGIN PRIVATE KEY-----")) {
-                console.error("Key found as single line, this WILL fail unless formatted. Attempting emergency repair...");
+            if (key.includes(header) && key.includes(footer)) {
+                const startIndex = key.indexOf(header) + header.length;
+                const endIndex = key.indexOf(footer);
+                const base64Part = key.substring(startIndex, endIndex).replace(/\s/g, "");
+
+                // Reconstruct with guaranteed good formatting
+                credentials.private_key = `${header}\n${base64Part}\n${footer}`;
+
+                console.error(`PEM Reconstructed: OriginalLength=${key.length}, CleanBase64Length=${base64Part.length}`);
+                console.error(`Safe Metadata: Start=${base64Part.substring(0, 5)}... End=...${base64Part.substring(base64Part.length - 5)}`);
+            } else {
+                console.error("Key guards missing! PEM might be corrupted.");
+                // Fallback: just try to fix newlines if guards are missing
+                credentials.private_key = key;
             }
         } else {
             console.error("Credentials JSON parsed but 'private_key' field is missing!");
@@ -49,10 +58,11 @@ const getAuth = () => {
         // Final fallback: if it looks like a PEM key anyway, try to use it
         if (keyString.includes("-----BEGIN PRIVATE KEY-----")) {
             console.error("Found PEM header in non-JSON string, attempting raw auth...");
+            const cleanedKey = keyString.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
             return new google.auth.GoogleAuth({
                 credentials: {
-                    private_key: keyString.replace(/\\n/g, "\n"),
-                    client_email: "extraction-bot@entity-directory-scraper.iam.gserviceaccount.com" // Fallback client_email
+                    private_key: cleanedKey,
+                    client_email: "extraction-bot@entity-directory-scraper.iam.gserviceaccount.com"
                 },
                 scopes: SCOPES,
             });
