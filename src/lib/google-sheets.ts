@@ -96,9 +96,8 @@ export async function getServicesFromSheets(): Promise<Service[]> {
 
 export async function getClientsFromSheets(): Promise<Client[]> {
     try {
-        // Fallback to "Specefic Sheet" if "Client Coordinates Updates" fails
-        // or if we aren't sure of the client tab name yet.
-        const rows = await getGoogleSheetData("'Client Coordinates Updates'!A2:F");
+        // Fallback or specific client tab name
+        const rows = await getGoogleSheetData("'Client Coordinates Update'!A2:F");
         return rows.map((row: any) => ({
             firstName: (row[0] || "").trim(),
             lastName: (row[1] || "").trim(),
@@ -172,8 +171,8 @@ export async function saveClientToSheets(client: Client) {
     ];
 
     if (index !== -1) {
-        await updateGoogleSheetData(`'Client Coordinates Updates'!A${index + 2}:F${index + 2}`, [row]);
+        await updateGoogleSheetData(`'Client Coordinates Update'!A${index + 2}:F${index + 2}`, [row]);
     } else {
-        await appendGoogleSheetData("'Client Coordinates Updates'!A:F", [row]);
+        await appendGoogleSheetData("'Client Coordinates Update'!A:F", [row]);
     }
 }
