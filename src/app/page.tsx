@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { Client, Service } from "@/lib/csv";
+import { Client, Service } from "@/types";
 import { calculateDistance } from "@/lib/utils";
 import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check } from "lucide-react";
 

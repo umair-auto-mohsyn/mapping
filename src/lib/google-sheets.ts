@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { Client, Service } from "./csv";
+import { Client, Service } from "@/types";
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 

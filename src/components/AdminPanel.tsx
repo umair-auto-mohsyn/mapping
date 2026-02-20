@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X as CloseIcon, Plus, Trash2, Edit, Search } from "lucide-react";
-import { Client, Service } from "@/lib/csv";
+import { Client, Service } from "@/types";
 
 interface AdminPanelProps {
     onClose: () => void;

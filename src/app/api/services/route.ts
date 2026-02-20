@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Service } from "@/lib/csv";
+import { Service } from "@/types";
 import { saveServiceToSheets, deleteServiceFromSheets } from "@/lib/google-sheets";
 
 export const dynamic = "force-dynamic";

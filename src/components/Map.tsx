@@ -7,7 +7,7 @@ import {
     InfoWindow,
     useMap,
 } from "@vis.gl/react-google-maps";
-import { Client, Service } from "@/lib/csv";
+import { Client, Service } from "@/types";
 import { CATEGORY_COLORS } from "@/lib/utils";
 import { MapPin, RotateCcw, Share2, Copy, CheckCircle2, Plus, Loader2 } from "lucide-react";
 import { normalizeGooglePlace } from "@/lib/google-places";

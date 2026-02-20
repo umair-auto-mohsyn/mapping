@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Client } from "@/lib/csv";
+import { Client } from "@/types";
 import { saveClientToSheets } from "@/lib/google-sheets";
 
 export async function POST(request: Request) {
