@@ -18,7 +18,7 @@ interface MapProps {
     filteredServices: Service[];
     discoveredServices?: any[];
     radius: number | "ALL";
-    onDataUpdate?: () => Promise<void>;
+    onDataUpdate?: () => Promise<any>;
 }
 
 interface DisplayService extends Service {
@@ -49,6 +49,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, di
     const map = useMap();
     const [selectedService, setSelectedService] = useState<DisplayService | null>(null);
     const [selectedDiscoveredPlace, setSelectedDiscoveredPlace] = useState<any | null>(null);
+    const [justAddedId, setJustAddedId] = useState<string | null>(null);
     const [isEnriching, setIsEnriching] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -79,13 +80,17 @@ export default function Map({ selectedCity, selectedClient, filteredServices, di
     const processedDiscovered = useMemo(() => {
         const locationMap: { [key: string]: number } = {};
 
+        // Filter out discovered places that are already in filteredServices
+        const existingSourceIds = new Set(filteredServices.map(s => s.source_id));
+        const filteredDiscovered = discoveredServices.filter(p => !existingSourceIds.has(p.place_id));
+
         // Account for existing services to avoid overlapping with them too
         filteredServices.forEach(s => {
             const posKey = `${s.latitude.toFixed(6)},${s.longitude.toFixed(6)}`;
             locationMap[posKey] = (locationMap[posKey] || 0) + 1;
         });
 
-        return discoveredServices.map((place) => {
+        return filteredDiscovered.map((place) => {
             const posKey = `${place.geometry.location.lat.toFixed(6)},${place.geometry.location.lng.toFixed(6)}`;
             locationMap[posKey] = (locationMap[posKey] || 0) + 1;
             const count = locationMap[posKey];
@@ -128,8 +133,14 @@ export default function Map({ selectedCity, selectedClient, filteredServices, di
             });
 
             if (saveRes.ok) {
+                const saveResult = await saveRes.json();
                 setSelectedDiscoveredPlace(null);
-                if (onDataUpdate) await onDataUpdate();
+
+                if (onDataUpdate) {
+                    await onDataUpdate();
+                    // Set the just added ID to trigger auto-selection in useEffect
+                    setJustAddedId(saveResult.service.source_id);
+                }
             }
         } catch (error) {
             console.error("Enrichment error:", error);
@@ -138,6 +149,17 @@ export default function Map({ selectedCity, selectedClient, filteredServices, di
             setIsEnriching(false);
         }
     };
+
+    // Auto-select newly added service
+    useEffect(() => {
+        if (justAddedId) {
+            const found = processedServices.find(s => s.source_id === justAddedId);
+            if (found) {
+                setSelectedService(found);
+                setJustAddedId(null);
+            }
+        }
+    }, [processedServices, justAddedId]);
 
     // Center map logic
     useEffect(() => {

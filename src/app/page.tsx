@@ -47,6 +47,7 @@ export default function Home() {
         const d = await res.json();
         setData(d);
         setLoading(false);
+        return d;
     };
 
     useEffect(() => {
