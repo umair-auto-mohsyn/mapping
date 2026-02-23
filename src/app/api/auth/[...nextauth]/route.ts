@@ -10,8 +10,11 @@ const handler = NextAuth({
     ],
     callbacks: {
         async signIn({ user }) {
-            // Restriction: Only allow users with @mohsyn.com emails
-            if (user.email && user.email.endsWith("@mohsyn.com")) {
+            // Restriction: Only allow internal domains
+            const allowedDomains = ["@mohsyn.com", "@humanetek.com"];
+            const isAllowed = user.email && allowedDomains.some(domain => user.email?.endsWith(domain));
+
+            if (isAllowed) {
                 return true;
             }
             return false; // Deny access for all other domains

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Client, Service } from "@/types";
 import { calculateDistance } from "@/lib/utils";
-import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check } from "lucide-react";
+import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck } from "lucide-react";
 
 // CATEGORY_COLORS for reference in select
 const CATEGORY_COLORS: Record<string, string> = {
@@ -204,16 +204,18 @@ export default function Home() {
     return (
         <main className="flex flex-col md:flex-row h-screen overflow-hidden bg-white relative">
             {/* Mobile Header */}
-            <div className="md:hidden flex items-center justify-between p-4 border-b bg-white z-20 shadow-sm">
-                <div className="flex items-center gap-2">
-                    <MapPin className="text-blue-600" size={20} />
-                    <h1 className="text-lg font-bold text-gray-800">Coverage</h1>
+            <div className="md:hidden flex items-center justify-between p-4 border-b bg-gray-900 z-20 shadow-lg">
+                <div className="flex items-center gap-3">
+                    <div className="bg-blue-600 p-1.5 rounded-lg shadow-inner">
+                        <Truck className="text-white" size={20} strokeWidth={3} />
+                    </div>
+                    <h1 className="text-lg font-black text-white tracking-tight uppercase">Service Delivery Mapping</h1>
                 </div>
                 <button
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/20"
                 >
-                    {isMenuOpen ? <CloseIcon size={24} /> : <Menu size={24} />}
+                    {isMenuOpen ? <CloseIcon size={24} className="text-white" /> : <Menu size={24} className="text-white" strokeWidth={3} />}
                 </button>
             </div>
 
@@ -223,9 +225,11 @@ export default function Home() {
                 md:relative md:translate-x-0 md:shadow-lg
                 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
-                <div className="p-4 border-b hidden md:flex items-center gap-2">
-                    <MapPin className="text-blue-600" size={20} />
-                    <h1 className="text-lg font-bold text-gray-800 tracking-tight">Service Coverage</h1>
+                <div className="p-4 border-b hidden md:flex items-center gap-3 bg-gray-50/50">
+                    <div className="bg-blue-600 p-2 rounded-xl shadow-md">
+                        <Truck className="text-white" size={22} strokeWidth={3} />
+                    </div>
+                    <h1 className="text-lg font-black text-gray-900 tracking-tighter uppercase leading-tight">Service Delivery<br /><span className="text-blue-600">Mapping</span></h1>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 scrollbar-hide">

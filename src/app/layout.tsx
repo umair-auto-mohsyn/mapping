@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-    title: "Service Coverage Visualizer",
-    description: "Internal tool for service coverage analysis around clients",
+    title: "Service Delivery Mapping",
+    description: "Enterprise Service Coverage & Delivery Monitoring",
 };
 
 export default function RootLayout({
