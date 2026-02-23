@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { getClientsFromSheets, getServicesFromSheets } from "@/lib/google-sheets";
+import { normalizeCityName } from "@/lib/google-places";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
     try {
-        const clients = await getClientsFromSheets();
-        const services = await getServicesFromSheets();
+        const rawClients = await getClientsFromSheets();
+        const rawServices = await getServicesFromSheets();
 
+        // Normalize city names within the data objects themselves
+        const clients = rawClients.map(c => ({ ...c, city: normalizeCityName(c.city) }));
+        const services = rawServices.map(s => ({ ...s, city: normalizeCityName(s.city) }));
+
+        // Get unique cities and normalize them (e.g., Lodhrān -> Lodhran)
         const cities = Array.from(new Set([
             ...clients.map(c => c.city),
             ...services.map(s => s.city)

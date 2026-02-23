@@ -109,6 +109,9 @@ export function normalizeGooglePlace(
         }
     }
 
+    // NORMALIZATION: Fix spelling mistakes like Lodhrān -> Lodhran
+    extractedCity = normalizeCityName(extractedCity);
+
     // Map the internal category (fallback to preference)
     const category = mapGoogleTypeToCategory(place.types || [], internalCategory);
 
@@ -126,4 +129,15 @@ export function normalizeGooglePlace(
         image_url: "",
         data_source: "Google Maps"
     };
+}
+export function normalizeCityName(city: string): string {
+    if (!city) return "";
+
+    // Normalize Lodhrān to Lodhran
+    let normalized = city.replace(/Lodhrān/gi, "Lodhran");
+
+    // Add other normalizations if needed in future
+    // normalized = normalized.replace(/.../gi, "...");
+
+    return normalized.trim();
 }
