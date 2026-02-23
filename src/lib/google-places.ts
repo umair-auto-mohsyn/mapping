@@ -1,25 +1,31 @@
 import { Service } from "@/types";
 
-export const CATEGORY_TO_GOOGLE_TYPES: Record<string, string[]> = {
-    "Hospital": ["hospital"],
-    "Clinic": ["doctor", "health"],
-    "Medical Store": ["pharmacy"],
-    "Pharmacy": ["pharmacy"],
-    "Police Station": ["police"],
-    "Fire Station": ["fire_station"],
-    "Ambulance Service": ["hospital"],
-    "Burn Emergency Hospital": ["hospital"],
-    "Laboratory": ["health", "medical_test_site"],
-    "Medical Equipment": ["health", "store"],
-    "Hardware Store": ["hardware_store"],
-    "Restaurant": ["restaurant", "food"],
-    "Gas Station": ["gas_station"],
-    "Supermarket": ["supermarket", "grocery_or_supermarket"],
-    "Electrician": ["electrician"],
-    "Plumber": ["plumber"],
-    "Female Salon": ["beauty_salon"],
-    "Male Salon": ["beauty_salon"],
+// Enhanced configuration: using both 'type' and 'keyword' for better accuracy
+export const CATEGORY_SEARCH_CONFIG: Record<string, { types: string[], keyword?: string }> = {
+    "Hospital": { types: ["hospital"] },
+    "Clinic": { types: ["doctor", "health_center"], keyword: "Clinic" },
+    "Medical Store": { types: ["pharmacy"], keyword: "Medical Store" },
+    "Pharmacy": { types: ["pharmacy"] },
+    "Police Station": { types: ["police"] },
+    "Fire Station": { types: ["fire_station"] },
+    "Ambulance Service": { types: ["hospital"], keyword: "Ambulance" }, // Key fix: use keyword 'Ambulance'
+    "Burn Emergency Hospital": { types: ["hospital"], keyword: "Burn Emergency" },
+    "Laboratory": { types: ["health", "medical_test_site"], keyword: "Laboratory" },
+    "Medical Equipment": { types: ["health", "store"], keyword: "Medical Equipment" },
+    "Hardware Store": { types: ["hardware_store"] },
+    "Restaurant": { types: ["restaurant", "food"] },
+    "Gas Station": { types: ["gas_station"] },
+    "Supermarket": { types: ["supermarket", "grocery_or_supermarket"] },
+    "Electrician": { types: ["electrician"], keyword: "Electrician" },
+    "Plumber": { types: ["plumber"], keyword: "Plumber" },
+    "Female Salon": { types: ["beauty_salon"], keyword: "Female Salon" },
+    "Male Salon": { types: ["beauty_salon"], keyword: "Male Salon" },
 };
+
+// Legacy support for backward compatibility during migration
+export const CATEGORY_TO_GOOGLE_TYPES: Record<string, string[]> = Object.fromEntries(
+    Object.entries(CATEGORY_SEARCH_CONFIG).map(([k, v]) => [k, v.types])
+);
 
 // Map Google types back to internal categories
 export function mapGoogleTypeToCategory(types: string[], preferredCategory?: string): string {

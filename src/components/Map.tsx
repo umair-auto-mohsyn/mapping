@@ -19,7 +19,7 @@ interface MapProps {
     allServices: Service[];
     discoveredServices?: any[];
     radius: number | "ALL";
-    onDataUpdate?: () => Promise<any>;
+    onDataUpdate?: (service?: Service) => Promise<any>;
 }
 
 interface DisplayService extends Service {
@@ -139,7 +139,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                 setSelectedDiscoveredPlace(null);
 
                 if (onDataUpdate) {
-                    await onDataUpdate();
+                    await onDataUpdate(saveResult.service);
                     // Set the just added ID to trigger auto-selection in useEffect
                     setJustAddedId(saveResult.service.source_id);
                 }

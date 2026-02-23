@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServicesFromSheets } from "@/lib/google-sheets";
-import { CATEGORY_TO_GOOGLE_TYPES, mapGoogleTypeToCategory } from "@/lib/google-places";
+import { CATEGORY_SEARCH_CONFIG, mapGoogleTypeToCategory } from "@/lib/google-places";
 
 export async function POST(request: Request) {
     try {
@@ -18,48 +18,42 @@ export async function POST(request: Request) {
         const allDiscoveredPlaces: any[] = [];
         const seenPlaceIds = new Set<string>();
 
-        // Map internal categories to Google types
-        let googleTypes: string[] = [];
-        categories.forEach((cat: string) => {
-            const types = CATEGORY_TO_GOOGLE_TYPES[cat] || [];
-            googleTypes = [...googleTypes, ...types];
-        });
+        // We search each category individually to use its specific keyword/types
+        for (const catName of categories) {
+            const config = CATEGORY_SEARCH_CONFIG[catName];
+            if (!config) continue;
 
-        // Use unique types
-        const uniqueGoogleTypes = Array.from(new Set(googleTypes));
+            const types = config.types || [];
+            const keyword = config.keyword || "";
 
-        // If no categories selected, we might not want to search everything 
-        // but the prompt says "When officer searches: City + Category + Radius"
-        if (uniqueGoogleTypes.length === 0) {
-            return NextResponse.json({ results: [] });
-        }
+            // Google Nearby Search: we can use 'type' OR 'keyword'. 
+            // Often 'keyword' is more accurate for things like "Ambulance".
+            // We'll iterate through types if no keyword, or use keyword + primary type.
+            const searchTypes = types.length > 0 ? [types[0]] : [""];
 
-        // Call Google Nearby Search for each type (Google Nearby Search supports only one type per request normally, 
-        // or a keyword. Using keyword might be better for multiple searches)
-        // Actually, nearbysearch 'type' parameter only supports one type.
-        // We can use 'keyword' or make multiple requests.
+            for (const type of searchTypes) {
+                let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius * 1000}&key=${apiKey}`;
+                if (type) url += `&type=${type}`;
+                if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
 
-        for (const type of uniqueGoogleTypes) {
-            const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius * 1000}&type=${type}&key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
 
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (data.results) {
-                data.results.forEach((place: any) => {
-                    if (!existingSourceIds.has(place.place_id) && !seenPlaceIds.has(place.place_id)) {
-                        // Better category mapping: try to find the best match or fallback to the search category
-                        const mappedCategory = mapGoogleTypeToCategory(place.types, categories[0]);
-
-                        allDiscoveredPlaces.push({
-                            ...place,
-                            internalCategory: mappedCategory
-                        });
-                        seenPlaceIds.add(place.place_id);
-                    }
-                });
+                if (data.results) {
+                    data.results.forEach((place: any) => {
+                        if (!existingSourceIds.has(place.place_id) && !seenPlaceIds.has(place.place_id)) {
+                            // Map it back to the category that triggered this specific search
+                            allDiscoveredPlaces.push({
+                                ...place,
+                                internalCategory: catName
+                            });
+                            seenPlaceIds.add(place.place_id);
+                        }
+                    });
+                }
             }
         }
+
 
         return NextResponse.json({ results: allDiscoveredPlaces });
     } catch (error) {

@@ -42,7 +42,7 @@ export default function Home() {
     const [clientSearch, setClientSearch] = useState("");
     const [categorySearch, setCategorySearch] = useState("");
 
-    const fetchData = async () => {
+    const fetchData = async (optimisticService?: Service) => {
         try {
             const res = await fetch("/api/data");
             const d = await res.json();
@@ -52,6 +52,16 @@ export default function Home() {
                 setLoading(false);
                 return d;
             }
+
+            // If we just added a service, inject it into the returned data
+            // to show it on the map immediately with full details
+            if (optimisticService && d.services) {
+                const alreadyExists = d.services.some((s: Service) => s.source_id === optimisticService.source_id);
+                if (!alreadyExists) {
+                    d.services = [optimisticService, ...d.services];
+                }
+            }
+
             setData(d);
             setLoading(false);
             return d;
