@@ -1,25 +1,36 @@
 import { Service } from "@/types";
 
 // Enhanced configuration: using both 'type' and 'keyword' for better accuracy
+// Enhanced configuration: Keyword-First strategy for high accuracy
 export const CATEGORY_SEARCH_CONFIG: Record<string, { types: string[], keyword?: string }> = {
-    "Hospital": { types: ["hospital"] },
-    "Clinic": { types: ["doctor", "health_center"], keyword: "Clinic" },
-    "Medical Store": { types: ["pharmacy"], keyword: "Medical Store" },
-    "Pharmacy": { types: ["pharmacy"] },
-    "Police Station": { types: ["police"] },
-    "Fire Station": { types: ["fire_station"] },
-    "Ambulance Service": { types: ["hospital"], keyword: "Ambulance" }, // Key fix: use keyword 'Ambulance'
-    "Burn Emergency Hospital": { types: ["hospital"], keyword: "Burn Emergency" },
-    "Laboratory": { types: ["health", "medical_test_site"], keyword: "Laboratory" },
-    "Medical Equipment": { types: ["health", "store"], keyword: "Medical Equipment" },
-    "Hardware Store": { types: ["hardware_store"] },
-    "Restaurant": { types: ["restaurant", "food"] },
-    "Gas Station": { types: ["gas_station"] },
-    "Supermarket": { types: ["supermarket", "grocery_or_supermarket"] },
+    "AC Technition": { types: [], keyword: "AC Technician Repair" },
+    "Ambulance Service": { types: [], keyword: "Ambulance" }, // Removed 'hospital' type to avoid general hospitals
+    "Bakery": { types: ["bakery"], keyword: "Bakery" },
+    "Car Repair": { types: ["car_repair"], keyword: "Car Repair workshop" },
+    "Child day care": { types: [], keyword: "Day care preschool" },
+    "Clinic": { types: ["doctor"], keyword: "Clinic" },
     "Electrician": { types: ["electrician"], keyword: "Electrician" },
-    "Plumber": { types: ["plumber"], keyword: "Plumber" },
+    "Electricity Provider Office": { types: [], keyword: "Electricity Office WAPDA IESCO" },
     "Female Salon": { types: ["beauty_salon"], keyword: "Female Salon" },
-    "Male Salon": { types: ["beauty_salon"], keyword: "Male Salon" },
+    "Fire Station": { types: ["fire_station"], keyword: "Fire Station" },
+    "Flower Shops": { types: ["florist"], keyword: "Flower Shop" },
+    "Gas Provider": { types: [], keyword: "Gas Company SNGPL SSGC" },
+    "Gas cylinder Services": { types: [], keyword: "Gas cylinder LPG delivery" },
+    "Hardware Store": { types: ["hardware_store"], keyword: "Hardware Store" },
+    "Home Chef": { types: [], keyword: "Home Chef Tiffin Service" },
+    "Hospital": { types: ["hospital"], keyword: "General Hospital" },
+    "Internet Service Provider": { types: [], keyword: "Internet Provider ISP" },
+    "Laboratory": { types: [], keyword: "Medical Laboratory Diagnostic Center" },
+    "Male Salon": { types: ["beauty_salon"], keyword: "Male Salon Barber" },
+    "Mason Service": { types: [], keyword: "Mason Construction Masonry" },
+    "Medical Equipment Supplier": { types: [], keyword: "Medical Equipment" },
+    "Medical Store": { types: ["pharmacy"], keyword: "Medical Store" },
+    "Mineral Water home delivery": { types: [], keyword: "Mineral Water delivery" },
+    "Old age houses": { types: [], keyword: "Old age home Nursing home" },
+    "Pharmacy": { types: ["pharmacy"], keyword: "Pharmacy" },
+    "Plumber": { types: ["plumber"], keyword: "Plumber" },
+    "Police Station": { types: ["police"], keyword: "Police Station" },
+    "Burn Emergency Hospital": { types: ["hospital"], keyword: "Burn Emergency Center" },
 };
 
 // Legacy support for backward compatibility during migration
@@ -40,13 +51,11 @@ export function mapGoogleTypeToCategory(types: string[], preferredCategory?: str
         "police": "Police Station",
         "fire_station": "Fire Station",
         "hardware_store": "Hardware Store",
-        "restaurant": "Restaurant",
-        "gas_station": "Gas Station",
-        "supermarket": "Supermarket",
-        "grocery_or_supermarket": "Supermarket",
+        "bakery": "Bakery",
+        "car_repair": "Car Repair",
         "electrician": "Electrician",
         "plumber": "Plumber",
-        "beauty_salon": "Male Salon", // Default to one, can be adjusted
+        "beauty_salon": "Male Salon",
     };
 
     for (const type of types) {
