@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { Service } from "@/types";
-import { saveServiceToSheets, deleteServiceFromSheets } from "@/lib/google-sheets";
+import { saveServiceToSheets, deleteServiceFromSheets, getServicesFromSheets } from "@/lib/google-sheets";
+import { STANDARD_CATEGORIES } from "@/lib/google-places";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
     try {
         const updatedService: Service = await request.json();
+
+        // Validation: Ensure city name is not a category
+        const isInvalidCity = STANDARD_CATEGORIES.some(cat =>
+            cat.toLowerCase() === updatedService.city.toLowerCase() ||
+            updatedService.city.toLowerCase() === "ambulance"
+        );
+
+        if (isInvalidCity) {
+            console.error(`Validation failed: Attempted to save service with city "${updatedService.city}" which is a category.`);
+            return NextResponse.json({ error: "Invalid city name: City cannot be a service category." }, { status: 400 });
+        }
+
         console.log(`Saving service to Sheets: ${updatedService.entity_name} (${updatedService.source_id})`);
 
         await saveServiceToSheets(updatedService);

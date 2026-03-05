@@ -33,6 +33,8 @@ export const CATEGORY_SEARCH_CONFIG: Record<string, { types: string[], keyword?:
     "Burn Emergency Hospital": { types: ["hospital"], keyword: "Burn Emergency Center" },
 };
 
+export const STANDARD_CATEGORIES = Object.keys(CATEGORY_SEARCH_CONFIG);
+
 // Legacy support for backward compatibility during migration
 export const CATEGORY_TO_GOOGLE_TYPES: Record<string, string[]> = Object.fromEntries(
     Object.entries(CATEGORY_SEARCH_CONFIG).map(([k, v]) => [k, v.types])
@@ -109,6 +111,13 @@ export function normalizeGooglePlace(
         }
     }
 
+    // EXTRA GUARD: If extractedCity is still empty or looks like a category, 
+    // and we have a selectedCity context, use that.
+    const isCategory = STANDARD_CATEGORIES.some((cat: string) => cat.toLowerCase() === extractedCity.toLowerCase() || extractedCity.toLowerCase() === "ambulance");
+    if ((!extractedCity || isCategory) && selectedCity) {
+        extractedCity = selectedCity;
+    }
+
     // NORMALIZATION: Fix spelling mistakes like Lodhrān -> Lodhran
     extractedCity = normalizeCityName(extractedCity);
 
@@ -136,8 +145,19 @@ export function normalizeCityName(city: string): string {
     // Normalize Lodhrān to Lodhran
     let normalized = city.replace(/Lodhrān/gi, "Lodhran");
 
-    // Add other normalizations if needed in future
-    // normalized = normalized.replace(/.../gi, "...");
+    // If the city name is actually a category, it's likely a data entry error
+    // We don't want to wipe it completely here but we can flag it by returning empty
+    // or letting the caller handle it. For now, let's keep it clean.
+    const isCategory = ["ambulance", "hospital", "clinic", "pharmacy"].some(cat => normalized.toLowerCase().includes(cat));
+
+    // If it's JUST a category name, it's definitely wrong
+    if (isCategory && normalized.split(" ").length <= 2) {
+        // If it's exactly "Ambulance" or similar, it's a category
+        const categories = ["ambulance", "medical store", "hospital", "ac technition"]; // small subset for speed or use STANDARD_CATEGORIES
+        if (categories.includes(normalized.toLowerCase())) {
+            return "";
+        }
+    }
 
     return normalized.trim();
 }

@@ -13,12 +13,6 @@ export async function GET() {
         const clients = rawClients.map(c => ({ ...c, city: normalizeCityName(c.city) }));
         const services = rawServices.map(s => ({ ...s, city: normalizeCityName(s.city) }));
 
-        // Get unique cities and normalize them (e.g., Lodhrān -> Lodhran)
-        const cities = Array.from(new Set([
-            ...clients.map(c => c.city),
-            ...services.map(s => s.city)
-        ])).filter(Boolean).sort();
-
         // Standard categories provided by the user
         const STANDARD_CATEGORIES = [
             "AC Technition", "Ambulance Service", "Bakery", "Car Repair", "Child day care", "Clinic",
@@ -26,8 +20,21 @@ export async function GET() {
             "Gas Provider", "Gas cylinder Services", "Hardware Store", "Home Chef", "Hospital",
             "Internet Service Provider", "Laboratory", "Male Salon", "Mason Service",
             "Medical Equipment Supplier", "Medical Store", "Mineral Water home delivery",
-            "Old age houses", "Pharmacy", "Plumber", "Police Station", "Burn Emergency Hospital"
+            "Old age houses", "Pharmacy", "Plumber", "Police Station", "Burn Emergency Hospital",
+            "Ambulance" // Added specifically as it was seen in the bug report
         ];
+
+        // Get unique cities and normalize them (e.g., Lodhrān -> Lodhran)
+        // Also strip out any values that are actually categories
+        const categoriesSet = new Set(STANDARD_CATEGORIES.map(c => c.toLowerCase()));
+
+        const cities = Array.from(new Set([
+            ...clients.map(c => c.city),
+            ...services.map(s => s.city)
+        ]))
+            .filter(Boolean)
+            .filter(city => !categoriesSet.has(city.toLowerCase()))
+            .sort();
 
         // Merge standard categories with any custom ones in the sheet
         const categories = Array.from(new Set([
