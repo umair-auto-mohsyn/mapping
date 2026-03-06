@@ -30,7 +30,8 @@ export function extractCoordinates(raw: string): { lat: number, lng: number } | 
     }
 
     // 3. DMS format: 24°49'55.7"N 67°04'12.9"E or 24.49'55.7"N 67.04'12.9"E
-    const dmsRegex = /(\d+)(?:°|\.)(\d+)'(\d+\.?\d*)"\s*N\s+(\d+)(?:°|\.)(\d+)'(\d+\.?\d*)"\s*E/i;
+    // Extended to handle alternate characters: ′ and ″
+    const dmsRegex = /(\d+)(?:°|\.)(\d+)(?:'|′)(\d+\.?\d*)(?:"|″)\s*(?:N|S)\s*[,/]?\s*(\d+)(?:°|\.)(\d+)(?:'|′)(\d+\.?\d*)(?:"|″)\s*(?:E|W)/i;
     const dmsMatch = raw.match(dmsRegex);
     if (dmsMatch) {
         return {
