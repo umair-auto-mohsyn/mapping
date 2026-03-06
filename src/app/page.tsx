@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Client, Service } from "@/types";
 import { calculateDistance } from "@/lib/utils";
-import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck } from "lucide-react";
+import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck, LogOut } from "lucide-react";
 
 // CATEGORY_COLORS for reference in select
 const CATEGORY_COLORS: Record<string, string> = {
@@ -381,6 +381,18 @@ export default function Home() {
                             ))}
                         </div>
                     </div>
+                </div>
+
+                <div className="p-4 bg-gray-50/50 mt-auto border-t space-y-3">
+                    <div className="flex gap-2">
+                        <div className="bg-red-50 p-2 rounded-xl border border-red-100/50">
+                            <MapPin size={16} className="text-red-500" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                            <h3 className="text-xs font-black text-gray-900 tracking-tighter uppercase leading-tight">Interactive Mode</h3>
+                            <p className="text-[10px] text-gray-500 font-medium">Click any point on the map to discover new services.</p>
+                        </div>
+                    </div>
 
                     <button
                         onClick={resetFilters}
@@ -392,6 +404,13 @@ export default function Home() {
 
                 <div className="p-3 bg-gray-900 text-white border-t border-white/10 flex justify-between items-center shrink-0">
                     <span className="text-[9px] text-gray-400 uppercase tracking-widest font-black">Status: {filteredServices.length} Results</span>
+                    <button
+                        onClick={() => signOut({ callbackUrl: '/' })}
+                        className="text-[9px] text-red-400 hover:text-red-300 uppercase tracking-widest font-black flex items-center gap-1 transition-colors"
+                        title="Sign Out"
+                    >
+                        <LogOut size={12} strokeWidth={3} /> Logout
+                    </button>
                 </div>
             </div>
 
