@@ -209,19 +209,6 @@ export async function getClientsFromSheets(): Promise<Client[]> {
                         const location = geoData.results[0].geometry.location;
                         coords = location;
                         console.log(`Geocoded [${firstName} ${lastName}]: OK`);
-
-                        // OPTIMIZATION: Save coordinates back to the sheet to avoid calling API again (Force refresh)
-                        try {
-                            if (location) {
-                                const updatedAddress = `${rawAddress}\n${location.lat}, ${location.lng}`;
-                                const colLetter = String.fromCharCode(65 + aIdx);
-                                const rowNumber = i + 2; // +1 for header, +1 for 1-based indexing
-                                await updateGoogleSheetData(`'Contacts Raw'!${colLetter}${rowNumber}`, [[updatedAddress]], EXTERNAL_CLIENT_SHEET_ID);
-                                console.log(`Saved coordinates back to HubSpot sheet for ${firstName} ${lastName} at ${colLetter}${rowNumber}`);
-                            }
-                        } catch (writeError: any) {
-                            console.error(`Failed to save back to HubSpot sheet for ${firstName}:`, writeError.message);
-                        }
                     } else {
                         console.warn(`Geocode [${firstName} ${lastName}] FAILED: ${geoData.status}. Address: ${cleanAddress}`);
                     }
