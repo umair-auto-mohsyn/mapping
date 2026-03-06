@@ -99,6 +99,27 @@ export async function appendGoogleSheetData(range: string, values: any[][]) {
     });
 }
 
+// Fetch authorized users and their roles from the "Authorized Users" tab
+export async function getAuthorizedUsers(): Promise<Record<string, 'ADMIN' | 'EDITOR'>> {
+    const roles: Record<string, 'ADMIN' | 'EDITOR'> = {};
+    try {
+        const rows = await getGoogleSheetData("'Authorized Users'!A:B", EXTERNAL_CLIENT_SHEET_ID);
+        // Assuming Column A is Email, Column B is Role taking rows from row 2 (skipping header)
+        if (rows.length > 1) {
+            rows.slice(1).forEach(row => {
+                const email = (row[0] || "").trim().toLowerCase();
+                const role = (row[1] || "").trim().toUpperCase();
+                if (email && (role === "ADMIN" || role === "EDITOR")) {
+                    roles[email] = role as 'ADMIN' | 'EDITOR';
+                }
+            });
+        }
+    } catch (e) {
+        console.warn("Could not fetch Authorized Users. They might not be set up yet.");
+    }
+    return roles;
+}
+
 export async function updateGoogleSheetData(range: string, values: any[][], customId?: string) {
     const auth = getAuth();
     const sheets = google.sheets({ version: "v4", auth });

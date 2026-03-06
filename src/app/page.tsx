@@ -413,17 +413,19 @@ export default function Home() {
                     onDataUpdate={fetchData}
                 />
 
-                {/* Floating Admin Buttons */}
-                <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-3">
-                    <button
-                        onClick={() => setIsAdminOpen(true)}
-                        className="bg-blue-600 p-3 rounded-2xl shadow-xl hover:bg-blue-700 text-white transition-all border-2 border-blue-500 group relative flex items-center justify-center"
-                        title="Quick Add"
-                    >
-                        <Plus size={20} strokeWidth={4} />
-                        <span className="absolute right-full mr-3 bg-gray-900 text-white text-[10px] font-black py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-lg">New Entry</span>
-                    </button>
-                </div>
+                {/* Floating Admin Buttons - Only visible to ADMINs and EDITORs */}
+                {session?.user?.role && ['ADMIN', 'EDITOR'].includes(session.user.role) && (
+                    <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-3">
+                        <button
+                            onClick={() => setIsAdminOpen(true)}
+                            className="bg-blue-600 p-3 rounded-2xl shadow-xl hover:bg-blue-700 text-white transition-all border-2 border-blue-500 group relative flex items-center justify-center"
+                            title="Quick Add"
+                        >
+                            <Plus size={20} strokeWidth={4} />
+                            <span className="absolute right-full mr-3 bg-gray-900 text-white text-[10px] font-black py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-lg">New Entry</span>
+                        </button>
+                    </div>
+                )}
 
                 {isAdminOpen && (
                     <AdminPanel
