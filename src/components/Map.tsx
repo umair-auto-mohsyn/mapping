@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
     Map as GoogleMap,
     Marker,
@@ -55,10 +55,17 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
     const [isEnriching, setIsEnriching] = useState(false);
     const [copied, setCopied] = useState(false);
 
+    // Hybrid rendering threshold
+    const useImperative = filteredServices.length > 50;
+
     // Manual Spiderfy/Jitter logic for overlapping markers
     const processedServices = useMemo<DisplayService[]>(() => {
-        const locationMap: { [key: string]: number } = {};
+        // Skip jitter calculation for large sets to save CPU
+        if (useImperative) {
+            return filteredServices.map(s => ({ ...s, displayPos: { lat: s.latitude, lng: s.longitude } }));
+        }
 
+        const locationMap: { [key: string]: number } = {};
         return filteredServices.map((service) => {
             const posKey = `${service.latitude.toFixed(6)},${service.longitude.toFixed(6)}`;
             locationMap[posKey] = (locationMap[posKey] || 0) + 1;
@@ -68,7 +75,6 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
             let lng = service.longitude;
 
             if (count > 1) {
-                // Add jitter to prevent total overlap
                 const angle = (count - 1) * (360 / 8) * (Math.PI / 180);
                 const spread = 0.0001 * (1 + Math.floor((count - 1) / 8));
                 lat += Math.sin(angle) * spread;
@@ -77,7 +83,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
 
             return { ...service, displayPos: { lat, lng } };
         });
-    }, [filteredServices]);
+    }, [filteredServices, useImperative]);
 
     const processedDiscovered = useMemo(() => {
         // Filter out discovered places that are already in any existing service
@@ -85,31 +91,70 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
         return discoveredServices.filter(p => !allSourceIds.has(p.place_id));
     }, [discoveredServices, allServices]);
 
-    // Clustering logic
-    const [markers, setMarkers] = useState<{ [key: string]: google.maps.Marker }>({});
+    // Clustering and Imperative markers
+    const [reactMarkers, setReactMarkers] = useState<{ [key: string]: google.maps.Marker }>({});
+    const imperativeMarkersRef = useRef<google.maps.Marker[]>([]);
+
     const clusterer = useMemo(() => {
         if (!map) return null;
         return new MarkerClusterer({ map });
     }, [map]);
 
+    // Handle clustering update
     useEffect(() => {
-        if (!clusterer) return;
+        if (!clusterer || !map) return;
+
         clusterer.clearMarkers();
-        const allMarkers = Object.values(markers);
-        // Only cluster if we have many markers (e.g. > 50)
-        // This ensures researchers can see individual results clearly when filtered
-        if (allMarkers.length > 50) {
-            clusterer.addMarkers(allMarkers);
+
+        if (useImperative) {
+            // Clean up old imperative markers
+            imperativeMarkersRef.current.forEach(m => m.setMap(null));
+            imperativeMarkersRef.current = [];
+
+            // Add new markers directly to clusterer bypass React state
+            const newMarkers = filteredServices.map(service => {
+                const marker = new google.maps.Marker({
+                    position: { lat: service.latitude, lng: service.longitude },
+                    title: service.entity_name,
+                    icon: {
+                        path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+                        fillColor: CATEGORY_COLORS[service.category] || CATEGORY_COLORS.default,
+                        fillOpacity: 1,
+                        strokeWeight: 1.5,
+                        strokeColor: "#ffffff",
+                        scale: 1.2,
+                        anchor: new google.maps.Point(12, 22),
+                    }
+                });
+                marker.addListener("click", () => {
+                    setSelectedService({ ...service, displayPos: { lat: service.latitude, lng: service.longitude } });
+                });
+                return marker;
+            });
+
+            imperativeMarkersRef.current = newMarkers;
+            clusterer.addMarkers(newMarkers);
+        } else {
+            // Use React-managed markers
+            const allReactMarkers = Object.values(reactMarkers);
+            if (allReactMarkers.length > 50) {
+                clusterer.addMarkers(allReactMarkers);
+            }
         }
-    }, [clusterer, markers]);
+
+        return () => {
+            clusterer.clearMarkers();
+            imperativeMarkersRef.current.forEach(m => m.setMap(null));
+        };
+    }, [clusterer, map, useImperative, filteredServices, reactMarkers]);
 
     const setMarkerRef = (marker: google.maps.Marker | null, key: string) => {
         if (marker) {
-            if (markers[key] !== marker) {
-                setMarkers(prev => ({ ...prev, [key]: marker }));
+            if (reactMarkers[key] !== marker) {
+                setReactMarkers(prev => ({ ...prev, [key]: marker }));
             }
-        } else if (markers[key]) {
-            setMarkers(prev => {
+        } else if (reactMarkers[key]) {
+            setReactMarkers(prev => {
                 const newMarkers = { ...prev };
                 delete newMarkers[key];
                 return newMarkers;
@@ -249,8 +294,8 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                     </>
                 )}
 
-                {/* Service Markers */}
-                {processedServices.map((service, index) => {
+                {/* Service Markers - Only render via React if not using imperative mode */}
+                {!useImperative && processedServices.map((service, index) => {
                     const key = `service-${service.source_id || 'no-id'}-${service.latitude}-${service.longitude}-${index}`;
                     return (
                         <Marker
@@ -272,7 +317,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                     );
                 })}
 
-                {/* Discovered Markers (Yellow) */}
+                {/* Discovered Markers (Yellow) - Always React-managed as they are few */}
                 {processedDiscovered.map((place) => {
                     const key = `discovered-${place.place_id}`;
                     const displayPos = { lat: place.geometry.location.lat, lng: place.geometry.location.lng };
