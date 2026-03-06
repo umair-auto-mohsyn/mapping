@@ -3,13 +3,11 @@
 import { useEffect, useState, useMemo } from "react";
 import {
     Map as GoogleMap,
+    Marker,
     InfoWindow,
     useMap,
-    AdvancedMarker,
-    useAdvancedMarkerRef,
 } from "@vis.gl/react-google-maps";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
-import type { Marker as GoogleMarker } from "@googlemaps/markerclusterer";
 import { Client, Service } from "@/types";
 import { CATEGORY_COLORS } from "@/lib/utils";
 import { MapPin, RotateCcw, Share2, Copy, CheckCircle2, Plus, Loader2 } from "lucide-react";
@@ -88,7 +86,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
     }, [discoveredServices, allServices]);
 
     // Clustering logic
-    const [markers, setMarkers] = useState<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
+    const [markers, setMarkers] = useState<{ [key: string]: google.maps.Marker }>({});
     const clusterer = useMemo(() => {
         if (!map) return null;
         return new MarkerClusterer({ map });
@@ -100,7 +98,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
         clusterer.addMarkers(Object.values(markers));
     }, [clusterer, markers]);
 
-    const setMarkerRef = (marker: google.maps.marker.AdvancedMarkerElement | null, key: string) => {
+    const setMarkerRef = (marker: google.maps.Marker | null, key: string) => {
         if (marker && markers[key] !== marker) {
             setMarkers(prev => ({ ...prev, [key]: marker }));
         }
@@ -215,29 +213,20 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                 {/* Client Marker */}
                 {selectedClient && (
                     <>
-                        <AdvancedMarker
+                        <Marker
                             position={{ lat: selectedClient.latitude, lng: selectedClient.longitude }}
                             title={`Client: ${selectedClient.firstName} ${selectedClient.lastName}`}
                             zIndex={2000}
-                        >
-                            <div
-                                style={{
-                                    backgroundColor: '#1e40af',
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '8px',
-                                    border: '2px solid white',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-                                </svg>
-                            </div>
-                        </AdvancedMarker>
+                            icon={{
+                                path: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
+                                fillColor: "#1e40af",
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: "#ffffff",
+                                scale: 2,
+                                anchor: new google.maps.Point(12, 12),
+                            }}
+                        />
                         {radius !== "ALL" && (
                             <MapCircle
                                 center={{ lat: selectedClient.latitude, lng: selectedClient.longitude }}
@@ -251,29 +240,22 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                 {processedServices.map((service, index) => {
                     const key = `service-${service.source_id || 'no-id'}-${service.latitude}-${service.longitude}-${index}`;
                     return (
-                        <AdvancedMarker
+                        <Marker
                             key={key}
                             ref={(marker) => setMarkerRef(marker, key)}
                             position={service.displayPos}
                             title={service.entity_name}
                             onClick={() => setSelectedService(service)}
-                        >
-                            <div
-                                style={{
-                                    backgroundColor: CATEGORY_COLORS[service.category] || CATEGORY_COLORS.default,
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '50%',
-                                    border: '2px solid white',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                            >
-                                <MapPin size={14} color="white" />
-                            </div>
-                        </AdvancedMarker>
+                            icon={{
+                                path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+                                fillColor: CATEGORY_COLORS[service.category] || CATEGORY_COLORS.default,
+                                fillOpacity: 1,
+                                strokeWeight: 1.5,
+                                strokeColor: "#ffffff",
+                                scale: 1.2,
+                                anchor: new google.maps.Point(12, 22),
+                            }}
+                        />
                     );
                 })}
 
@@ -282,30 +264,23 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                     const key = `discovered-${place.place_id}`;
                     const displayPos = { lat: place.geometry.location.lat, lng: place.geometry.location.lng };
                     return (
-                        <AdvancedMarker
+                        <Marker
                             key={key}
                             ref={(marker) => setMarkerRef(marker, key)}
                             position={displayPos}
                             title={place.name}
                             onClick={() => setSelectedDiscoveredPlace({ ...place, displayPos })}
                             zIndex={1000}
-                        >
-                            <div
-                                style={{
-                                    backgroundColor: '#eab308',
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '50%',
-                                    border: '2px solid white',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                            >
-                                <Plus size={14} color="white" />
-                            </div>
-                        </AdvancedMarker>
+                            icon={{
+                                path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+                                fillColor: "#eab308", // yellow-500
+                                fillOpacity: 1,
+                                strokeWeight: 1.5,
+                                strokeColor: "#ffffff",
+                                scale: 1.2,
+                                anchor: new google.maps.Point(12, 22),
+                            }}
+                        />
                     );
                 })}
 
