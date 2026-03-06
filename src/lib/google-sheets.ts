@@ -99,12 +99,13 @@ export async function appendGoogleSheetData(range: string, values: any[][]) {
     });
 }
 
-export async function updateGoogleSheetData(range: string, values: any[][]) {
+export async function updateGoogleSheetData(range: string, values: any[][], customId?: string) {
     const auth = getAuth();
     const sheets = google.sheets({ version: "v4", auth });
+    const targetId = customId || SHEET_ID;
 
     await sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID,
+        spreadsheetId: targetId,
         range,
         valueInputOption: "USER_ENTERED",
         requestBody: {
@@ -180,19 +181,50 @@ export async function getClientsFromSheets(): Promise<Client[]> {
             const firstName = (row[fIdx] || "").trim();
             const lastName = (lIdx !== -1 ? (row[lIdx] || "").trim() : "");
             const email = (row[eIdx] || "").trim() || `hubspot-${i}@mohsyn.com`;
-            const city = (cIdx !== -1 ? (row[cIdx] || "").trim() : "");
+            let city = (cIdx !== -1 ? (row[cIdx] || "").trim() : "");
             const rawAddress = (row[aIdx] || "").trim();
 
             if (!firstName && !lastName) continue;
+
+            // FALLBACK: If city is empty, try to find it in the address
+            if (!city && rawAddress) {
+                const commonCities = ["karachi", "lahore", "islamabad", "rawalpindi", "faisalabad", "multan", "lodhran"];
+                const addrLower = rawAddress.toLowerCase();
+                const foundCity = commonCities.find(c => addrLower.includes(c));
+                if (foundCity) {
+                    city = foundCity.charAt(0).toUpperCase() + foundCity.slice(1);
+                    console.log(`Extracted city "${city}" from address for ${firstName} ${lastName}`);
+                }
+            }
 
             let coords = extractCoordinates(rawAddress);
             if (!coords && rawAddress && apiKey) {
                 const cleanAddress = rawAddress.split('\n')[0].replace(/Address: /g, '');
                 try {
-                    const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanAddress + ", " + city)}&key=${apiKey}`);
+                    const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanAddress + (city ? ", " + city : ""))}&key=${apiKey}`;
+                    const geoRes = await fetch(geoUrl);
                     const geoData = await geoRes.json();
-                    if (geoData.status === "OK") coords = geoData.results[0].geometry.location;
-                } catch (e) { }
+
+                    if (geoData.status === "OK") {
+                        coords = geoData.results[0].geometry.location;
+                        console.log(`Geocoded [${firstName} ${lastName}]: OK`);
+
+                        // OPTIMIZATION: Save coordinates back to the sheet to avoid calling API again
+                        try {
+                            const updatedAddress = `${rawAddress}\n${coords.lat}, ${coords.lng}`;
+                            const colLetter = String.fromCharCode(65 + aIdx);
+                            const rowNumber = i + 2; // +1 for header, +1 for 1-based indexing
+                            await updateGoogleSheetData(`'Contacts Raw'!${colLetter}${rowNumber}`, [[updatedAddress]], EXTERNAL_CLIENT_SHEET_ID);
+                            console.log(`Saved coordinates back to HubSpot sheet for ${firstName} ${lastName} at ${colLetter}${rowNumber}`);
+                        } catch (writeError: any) {
+                            console.error(`Failed to save back to HubSpot sheet for ${firstName}:`, writeError.message);
+                        }
+                    } else {
+                        console.warn(`Geocode [${firstName} ${lastName}] FAILED: ${geoData.status}. Address: ${cleanAddress}`);
+                    }
+                } catch (e: any) {
+                    console.error(`Geocode [${firstName} ${lastName}] ERROR:`, e.message);
+                }
             }
 
             if (coords) {
@@ -205,6 +237,8 @@ export async function getClientsFromSheets(): Promise<Client[]> {
                     longitude: coords.lng,
                     id: email
                 });
+            } else {
+                console.log(`Skipping [${firstName} ${lastName}]: No coordinates found (Geocode fallback failed or skipped)`);
             }
         }
 
