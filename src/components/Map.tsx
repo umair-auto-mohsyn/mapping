@@ -215,20 +215,29 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                 {/* Client Marker */}
                 {selectedClient && (
                     <>
-                        <Marker
+                        <AdvancedMarker
                             position={{ lat: selectedClient.latitude, lng: selectedClient.longitude }}
                             title={`Client: ${selectedClient.firstName} ${selectedClient.lastName}`}
                             zIndex={2000}
-                            icon={{
-                                path: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
-                                fillColor: "#1e40af",
-                                fillOpacity: 1,
-                                strokeWeight: 2,
-                                strokeColor: "#ffffff",
-                                scale: 2,
-                                anchor: new google.maps.Point(12, 12),
-                            }}
-                        />
+                        >
+                            <div
+                                style={{
+                                    backgroundColor: '#1e40af',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    border: '2px solid white',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+                                </svg>
+                            </div>
+                        </AdvancedMarker>
                         {radius !== "ALL" && (
                             <MapCircle
                                 center={{ lat: selectedClient.latitude, lng: selectedClient.longitude }}
