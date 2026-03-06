@@ -244,27 +244,30 @@ export async function getClientsFromSheets(): Promise<Client[]> {
                         const location = geoData.results[0].geometry.location;
                         coords = location;
                         console.log(`Geocoded [${firstName} ${lastName}]: OK`);
-
-                        // SAFE OPTIMIZATION: Save to separate 'Client Coordinates' tab
-                        try {
-                            if (location) {
-                                const cacheRow = [firstName, lastName, emailKey, city, location.lat, location.lng];
-                                await sheets.spreadsheets.values.append({
-                                    spreadsheetId: EXTERNAL_CLIENT_SHEET_ID,
-                                    range: "'Client Coordinates'!A:F",
-                                    valueInputOption: "USER_ENTERED",
-                                    requestBody: { values: [cacheRow] }
-                                });
-                                console.log(`Cached coordinates for ${firstName} ${lastName} in 'Client Coordinates' tab`);
-                            }
-                        } catch (cacheError: any) {
-                            console.error(`Failed to cache coordinates for ${firstName}:`, cacheError.message);
-                        }
                     } else {
                         console.warn(`Geocode [${firstName} ${lastName}] FAILED: ${geoData.status}. Address: ${cleanAddress}`);
                     }
                 } catch (e: any) {
                     console.error(`Geocode [${firstName} ${lastName}] ERROR:`, e.message);
+                }
+            }
+
+            // CACHING LOGIC: If we have coordinates (from parsing OR geocoding) 
+            // and they weren't already in the cache, save them now.
+            if (coords && emailKey && !cacheMap.has(emailKey)) {
+                try {
+                    const cacheRow = [firstName, lastName, emailKey, city, coords.lat, coords.lng];
+                    await sheets.spreadsheets.values.append({
+                        spreadsheetId: EXTERNAL_CLIENT_SHEET_ID,
+                        range: "'Client Coordinates'!A:F",
+                        valueInputOption: "USER_ENTERED",
+                        requestBody: { values: [cacheRow] }
+                    });
+                    console.log(`Cached ALL coordinates for ${firstName} ${lastName}`);
+                    // Update local map to avoid duplicate appends in the same run if there happen to be dupes
+                    cacheMap.set(emailKey, coords);
+                } catch (cacheError: any) {
+                    console.error(`Failed to cache coordinates for ${firstName}:`, cacheError.message);
                 }
             }
 
