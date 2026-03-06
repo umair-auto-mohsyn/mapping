@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { Client, Service } from "@/types";
+import { extractCoordinates } from "./coordinate-parser";
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
@@ -79,16 +80,18 @@ const getAuth = () => {
 };
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || "1NyHwjHgkjjicZghQVc6wzzl4uXUUi5dLYiJOkehUtMM";
+const EXTERNAL_CLIENT_SHEET_ID = "167tn8tQ_P5tD_BkbLoT6KYqYvMTpaLaukZ8g887vX84";
 
-export async function getGoogleSheetData(range: string) {
+export async function getGoogleSheetData(range: string, customSheetId?: string) {
     const auth = getAuth();
     const sheets = google.sheets({ version: "v4", auth });
+    const targetId = customSheetId || SHEET_ID;
 
-    console.log(`Fetching data from Sheet ID: ${SHEET_ID}, Range: ${range}`);
+    console.log(`Fetching data from Sheet ID: ${targetId}, Range: ${range}`);
 
     try {
         const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: targetId,
             range,
         });
         const rows = response.data.values || [];
@@ -109,7 +112,7 @@ async function logSpreadsheetMetadata() {
         const metadata = await sheets.spreadsheets.get({
             spreadsheetId: SHEET_ID,
         });
-        const tabs = metadata.data.sheets?.map(s => s.properties?.title) || [];
+        const tabs = metadata.data.sheets?.map((s: any) => s.properties?.title) || [];
         console.log("Available tabs in this spreadsheet:", tabs.join(", "));
     } catch (e: any) {
         console.error("Failed to fetch spreadsheet metadata:", e.message);
@@ -170,9 +173,44 @@ export async function getServicesFromSheets(): Promise<Service[]> {
 
 export async function getClientsFromSheets(): Promise<Client[]> {
     try {
-        // Fallback or specific client tab name
-        const rows = await getGoogleSheetData("'Client Coordinates Update'!A2:F");
-        return rows.map((row: any) => ({
+        console.log("Fetching clients from both sources...");
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+        // 1. Fetch from HubSpot (External)
+        const hubspotRows = await getGoogleSheetData("'Contacts Raw'!A2:O", EXTERNAL_CLIENT_SHEET_ID);
+        const hubspotClients: Client[] = [];
+
+        for (let i = 0; i < hubspotRows.length; i++) {
+            const row = hubspotRows[i];
+            const firstName = (row[2] || "").trim();
+            const lastName = (row[3] || "").trim();
+            const email = (row[4] || "").trim() || `hubspot-${i}@mohsyn.com`;
+            const city = (row[12] || "").trim();
+            const rawAddress = (row[14] || "").trim();
+
+            if (!firstName && !lastName) continue;
+
+            let coords = extractCoordinates(rawAddress);
+            if (!coords && rawAddress && apiKey) {
+                const cleanAddress = rawAddress.split('\n')[0].replace(/Address: /g, '');
+                try {
+                    const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanAddress + ", " + city)}&key=${apiKey}`);
+                    const geoData = await geoRes.json();
+                    if (geoData.status === "OK") coords = geoData.results[0].geometry.location;
+                } catch (e) { }
+            }
+
+            if (coords) {
+                hubspotClients.push({
+                    firstName, lastName, email, city,
+                    latitude: coords.lat, longitude: coords.lng, id: email
+                });
+            }
+        }
+
+        // 2. Fetch from Local Overrides (Primary Sheet)
+        const localRows = await getGoogleSheetData("'Client Coordinates Update'!A2:F");
+        const localClients: Client[] = localRows.map((row: any) => ({
             firstName: (row[0] || "").trim(),
             lastName: (row[1] || "").trim(),
             email: (row[2] || "").trim(),
@@ -180,9 +218,18 @@ export async function getClientsFromSheets(): Promise<Client[]> {
             latitude: parseFloat(row[4]) || 0,
             longitude: parseFloat(row[5]) || 0,
             id: (row[2] || `${row[0]}-${row[1]}`).trim(),
-        }));
+        })).filter(c => c.latitude !== 0);
+
+        // 3. Merge: Primary sheet overrides HubSpot if email matches
+        const clientMap = new Map<string, Client>();
+        hubspotClients.forEach((c: Client) => clientMap.set(c.email, c));
+        localClients.forEach((c: Client) => clientMap.set(c.email, c));
+
+        const finalClients = Array.from(clientMap.values());
+        console.log(`Merged ${hubspotClients.length} HubSpot + ${localClients.length} local -> ${finalClients.length} total clients.`);
+        return finalClients;
     } catch (error) {
-        console.warn("Client tab not found or inaccessible, returning empty list.");
+        console.error("Error fetching/merging clients:", error);
         return [];
     }
 }

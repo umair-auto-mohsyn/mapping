@@ -11,31 +11,32 @@ import { Client } from "../types";
 export function extractCoordinates(raw: string): { lat: number, lng: number } | null {
     if (!raw) return null;
 
-    // 1. Decimal format: (lat, lng) or just lat, lng
-    const decimalRegex = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/;
+    // 1. Decimal format: (lat, lng) or just lat, lng or 24.9006° N, 67.1164° E (simple decimal degrees with suffix)
+    // Also handles (33.586667, 73.201197) and 31.4909, 74.3207
+    const decimalRegex = /(-?\d+\.\d+)°?\s*(?:N|S)?\s*[,/]\s*(-?\d+\.\d+)°?\s*(?:E|W)?/i;
     const decimalMatch = raw.match(decimalRegex);
     if (decimalMatch) {
         return { lat: parseFloat(decimalMatch[1]), lng: parseFloat(decimalMatch[2]) };
     }
 
-    // 2. Prefixed N/E format without symbols: N334121.33 , E731255.01
-    // This looks like DDMMSS.SS or similar. 
-    // From user image: N333514.24 -> 33°35'14.24" -> 33.58728
-    const prefixedRegex = /N(\d{2})(\d{2})(\d{2}\.?\d*)\s*,\s*E(\d{2})(\d{2})(\d{2}\.?\d*)/;
+    // 2. Prefixed N/E format: N334121.33 , E731255.01 (DDMMSS.SS)
+    const prefixedRegex = /N\s*(\d{2})(\d{2})(\d{2}\.?\d*)\s*[,/]\s*E\s*(\d{2,3})(\d{2})(\d{2}\.?\d*)/i;
     const prefixedMatch = raw.match(prefixedRegex);
     if (prefixedMatch) {
-        const lat = dmsToDecimal(parseFloat(prefixedMatch[1]), parseFloat(prefixedMatch[2]), parseFloat(prefixedMatch[3]));
-        const lng = dmsToDecimal(parseFloat(prefixedMatch[4]), parseFloat(prefixedMatch[5]), parseFloat(prefixedMatch[6]));
-        return { lat, lng };
+        return {
+            lat: dmsToDecimal(parseFloat(prefixedMatch[1]), parseFloat(prefixedMatch[2]), parseFloat(prefixedMatch[3])),
+            lng: dmsToDecimal(parseFloat(prefixedMatch[4]), parseFloat(prefixedMatch[5]), parseFloat(prefixedMatch[6]))
+        };
     }
 
-    // 3. Standard DMS format: 24°49'55.7"N 67°04'12.9"E
-    const dmsRegex = /(\d+)°(\d+)'(\d+\.?\d*)"N\s+(\d+)°(\d+)'(\d+\.?\d*)"E/;
+    // 3. DMS format: 24°49'55.7"N 67°04'12.9"E or 24.49'55.7"N 67.04'12.9"E
+    const dmsRegex = /(\d+)(?:°|\.)(\d+)'(\d+\.?\d*)"\s*N\s+(\d+)(?:°|\.)(\d+)'(\d+\.?\d*)"\s*E/i;
     const dmsMatch = raw.match(dmsRegex);
     if (dmsMatch) {
-        const lat = dmsToDecimal(parseFloat(dmsMatch[1]), parseFloat(dmsMatch[2]), parseFloat(dmsMatch[3]));
-        const lng = dmsToDecimal(parseFloat(dmsMatch[4]), parseFloat(dmsMatch[5]), parseFloat(dmsMatch[6]));
-        return { lat, lng };
+        return {
+            lat: dmsToDecimal(parseFloat(dmsMatch[1]), parseFloat(dmsMatch[2]), parseFloat(dmsMatch[3])),
+            lng: dmsToDecimal(parseFloat(dmsMatch[4]), parseFloat(dmsMatch[5]), parseFloat(dmsMatch[6]))
+        };
     }
 
     return null;
