@@ -210,7 +210,7 @@ export async function getClientsFromSheets(): Promise<Client[]> {
                         coords = location;
                         console.log(`Geocoded [${firstName} ${lastName}]: OK`);
 
-                        // OPTIMIZATION: Save coordinates back to the sheet to avoid calling API again
+                        // OPTIMIZATION: Save coordinates back to the sheet to avoid calling API again (Force refresh)
                         try {
                             if (location) {
                                 const updatedAddress = `${rawAddress}\n${location.lat}, ${location.lng}`;
