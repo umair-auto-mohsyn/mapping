@@ -173,25 +173,26 @@ export async function getServicesFromSheets(): Promise<Service[]> {
 
 export async function getClientsFromSheets(): Promise<Client[]> {
     try {
-        console.log("Fetching clients from both sources...");
+        console.log("Fetching clients from HubSpot HubSpot 'Contacts Raw'...");
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-        // 1. Fetch from HubSpot (External)
-        const hubspotRows = await getGoogleSheetData("'Contacts Raw'!A2:O", EXTERNAL_CLIENT_SHEET_ID);
-        const hubspotClients: Client[] = [];
+        // Fetch from HubSpot (External) - Index 12 is Serving City, Index 14 is Raw Address
+        const rows = await getGoogleSheetData("'Contacts Raw'!A2:O", EXTERNAL_CLIENT_SHEET_ID);
+        const clients: Client[] = [];
 
-        for (let i = 0; i < hubspotRows.length; i++) {
-            const row = hubspotRows[i];
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
             const firstName = (row[2] || "").trim();
             const lastName = (row[3] || "").trim();
             const email = (row[4] || "").trim() || `hubspot-${i}@mohsyn.com`;
-            const city = (row[12] || "").trim();
-            const rawAddress = (row[14] || "").trim();
+            const city = (row[12] || "").trim(); // [Contacts] Serving City
+            const rawAddress = (row[14] || "").trim(); // Raw Address / Coordinates
 
             if (!firstName && !lastName) continue;
 
             let coords = extractCoordinates(rawAddress);
             if (!coords && rawAddress && apiKey) {
+                // geocode the first line for those without coordinates
                 const cleanAddress = rawAddress.split('\n')[0].replace(/Address: /g, '');
                 try {
                     const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanAddress + ", " + city)}&key=${apiKey}`);
@@ -201,35 +202,22 @@ export async function getClientsFromSheets(): Promise<Client[]> {
             }
 
             if (coords) {
-                hubspotClients.push({
-                    firstName, lastName, email, city,
-                    latitude: coords.lat, longitude: coords.lng, id: email
+                clients.push({
+                    firstName,
+                    lastName,
+                    email,
+                    city,
+                    latitude: coords.lat,
+                    longitude: coords.lng,
+                    id: email
                 });
             }
         }
 
-        // 2. Fetch from Local Overrides (Primary Sheet)
-        const localRows = await getGoogleSheetData("'Client Coordinates Update'!A2:F");
-        const localClients: Client[] = localRows.map((row: any) => ({
-            firstName: (row[0] || "").trim(),
-            lastName: (row[1] || "").trim(),
-            email: (row[2] || "").trim(),
-            city: (row[3] || "").trim(),
-            latitude: parseFloat(row[4]) || 0,
-            longitude: parseFloat(row[5]) || 0,
-            id: (row[2] || `${row[0]}-${row[1]}`).trim(),
-        })).filter(c => c.latitude !== 0);
-
-        // 3. Merge: Primary sheet overrides HubSpot if email matches
-        const clientMap = new Map<string, Client>();
-        hubspotClients.forEach((c: Client) => clientMap.set(c.email, c));
-        localClients.forEach((c: Client) => clientMap.set(c.email, c));
-
-        const finalClients = Array.from(clientMap.values());
-        console.log(`Merged ${hubspotClients.length} HubSpot + ${localClients.length} local -> ${finalClients.length} total clients.`);
-        return finalClients;
+        console.log(`Successfully processed ${clients.length} clients from HubSpot.`);
+        return clients;
     } catch (error) {
-        console.error("Error fetching/merging clients:", error);
+        console.error("Error fetching HubSpot clients:", error);
         return [];
     }
 }
