@@ -147,7 +147,7 @@ export async function updateGoogleSheetData(range: string, values: any[][]) {
 // Mapper functions to convert Sheets data to internal types
 export async function getServicesFromSheets(): Promise<Service[]> {
     try {
-        const rows = await getGoogleSheetData("'Specefic Sheet Clean'!A2:L");
+        const rows = await getGoogleSheetData("'Final Merged Sheet(Map Usage)'!A2:L");
         return rows.map((row: any) => ({
             source_id: (row[0] || "").trim(),
             entity_name: (row[1] || "").trim(),
@@ -208,10 +208,10 @@ export async function saveServiceToSheets(service: Service) {
 
     if (index !== -1) {
         // Update existing row (A is column 1, row is index + 2 because of header)
-        await updateGoogleSheetData(`'Specefic Sheet Clean'!A${index + 2}:L${index + 2}`, [row]);
+        await updateGoogleSheetData(`'Final Merged Sheet(Map Usage)'!A${index + 2}:L${index + 2}`, [row]);
     } else {
         // Append new row
-        await appendGoogleSheetData("'Specefic Sheet Clean'!A:L", [row]);
+        await appendGoogleSheetData("'Final Merged Sheet(Map Usage)'!A:L", [row]);
     }
 }
 
@@ -226,7 +226,7 @@ export async function deleteServiceFromSheets(sourceId: string) {
         // We'll clear the row. In a more advanced implementation, we might want to delete the row dimension.
         await sheets.spreadsheets.values.clear({
             spreadsheetId: SHEET_ID,
-            range: `'Specefic Sheet Clean'!A${index + 2}:L${index + 2}`,
+            range: `'Final Merged Sheet(Map Usage)'!A${index + 2}:L${index + 2}`,
         });
     }
 }
