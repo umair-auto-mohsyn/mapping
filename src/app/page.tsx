@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useSession } from "next-auth/react";
 import { Client, Service } from "@/types";
 import { calculateDistance } from "@/lib/utils";
 import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck } from "lucide-react";
@@ -36,6 +37,7 @@ export default function Home() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [discoveredServices, setDiscoveredServices] = useState<any[]>([]);
     const [isDiscovering, setIsDiscovering] = useState(false);
+    const { data: session, status } = useSession();
 
     // Field-specific search states
     const [citySearch, setCitySearch] = useState("");
