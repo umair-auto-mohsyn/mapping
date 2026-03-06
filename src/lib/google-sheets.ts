@@ -15,7 +15,6 @@ const getAuth = () => {
     keyString = keyString.trim();
     if ((keyString.startsWith("'") && keyString.endsWith("'")) ||
         (keyString.startsWith('"') && keyString.endsWith('"'))) {
-        console.error("Stripping surrounding quotes from GOOGLE_SERVICE_ACCOUNT_KEY");
         keyString = keyString.slice(1, -1);
     }
 
@@ -26,34 +25,20 @@ const getAuth = () => {
             // THE ULTIMATE CLEANER: Reconstruct PEM from bits to bypass mangling
             let key = credentials.private_key.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
 
-            // Extract the actual base64 content between guards
             const header = "-----BEGIN PRIVATE KEY-----";
             const footer = "-----END PRIVATE KEY-----";
 
             if (key.includes(header) && key.includes(footer)) {
                 const startIndex = key.indexOf(header) + header.length;
                 const endIndex = key.indexOf(footer);
-
-                // Hyper-aggressive: Strip EVERYTHING except valid Base64 characters
                 let base64Part = key.substring(startIndex, endIndex).replace(/[^A-Za-z0-9+/=]/g, "");
-
-                // Fix padding: Base64 length MUST be a multiple of 4
                 while (base64Part.length % 4 !== 0) {
                     base64Part += "=";
                 }
-
-                // Reconstruct with guaranteed good formatting (header, body, footer)
                 credentials.private_key = `${header}\n${base64Part}\n${footer}`;
-
-                console.error(`PEM Reconstructed: OriginalLength=${key.length}, CleanBase64Length=${base64Part.length}`);
-                console.error(`Safe Metadata: [${base64Part.substring(0, 10)}...] [...${base64Part.substring(base64Part.length - 10)}]`);
             } else {
-                console.error("Key guards missing! PEM might be corrupted.");
-                // Fallback: just try to fix newlines if guards are missing
                 credentials.private_key = key;
             }
-        } else {
-            console.error("Credentials JSON parsed but 'private_key' field is missing!");
         }
 
         return new google.auth.GoogleAuth({
@@ -61,11 +46,8 @@ const getAuth = () => {
             scopes: SCOPES,
         });
     } catch (e: any) {
-        console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY as JSON:", e.message);
-
-        // Final fallback: if it looks like a PEM key anyway, try to use it
+        // Final fallback: if it looks like a PEM key Anyway, try to use it
         if (keyString.includes("-----BEGIN PRIVATE KEY-----")) {
-            console.error("Found PEM header in non-JSON string, attempting raw auth...");
             const cleanedKey = keyString.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
             return new google.auth.GoogleAuth({
                 credentials: {
@@ -80,7 +62,7 @@ const getAuth = () => {
 };
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || "1NyHwjHgkjjicZghQVc6wzzl4uXUUi5dLYiJOkehUtMM";
-const EXTERNAL_CLIENT_SHEET_ID = "167tn8tQ_P5tD_BkbLoT6KYqYvMTpaLaukZ8g887vX84";
+const EXTERNAL_CLIENT_SHEET_ID = process.env.HUBSPOT_SHEET_ID || "167tn8tQ_P5tD_BkbLoT6KYqYvMTpaLaukZ8g887vX84";
 
 export async function getGoogleSheetData(range: string, customSheetId?: string) {
     const auth = getAuth();
@@ -99,23 +81,7 @@ export async function getGoogleSheetData(range: string, customSheetId?: string) 
         return rows;
     } catch (error: any) {
         console.error(`Error fetching data from range ${range}:`, error.message);
-        // If it's a 404/400, it might be a tab name mismatch. Let's list tabs to help diagnostics.
-        await logSpreadsheetMetadata();
         throw error;
-    }
-}
-
-async function logSpreadsheetMetadata() {
-    try {
-        const auth = getAuth();
-        const sheets = google.sheets({ version: "v4", auth });
-        const metadata = await sheets.spreadsheets.get({
-            spreadsheetId: SHEET_ID,
-        });
-        const tabs = metadata.data.sheets?.map((s: any) => s.properties?.title) || [];
-        console.log("Available tabs in this spreadsheet:", tabs.join(", "));
-    } catch (e: any) {
-        console.error("Failed to fetch spreadsheet metadata:", e.message);
     }
 }
 
@@ -147,7 +113,6 @@ export async function updateGoogleSheetData(range: string, values: any[][]) {
     });
 }
 
-// Mapper functions to convert Sheets data to internal types
 export async function getServicesFromSheets(): Promise<Service[]> {
     try {
         const rows = await getGoogleSheetData("'Final Merged Sheet(Map Usage)'!A2:L");
@@ -171,28 +136,57 @@ export async function getServicesFromSheets(): Promise<Service[]> {
     }
 }
 
+/**
+ * Fetches clients exclusively from the HubSpot-synced "Contacts Raw" sheet.
+ * Performs dynamic column mapping based on headers.
+ */
 export async function getClientsFromSheets(): Promise<Client[]> {
     try {
-        console.log("Fetching clients from HubSpot HubSpot 'Contacts Raw'...");
+        console.log("Fetching clients from HubSpot 'Contacts Raw'...");
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-        // Fetch from HubSpot (External) - Index 12 is Serving City, Index 14 is Raw Address
-        const rows = await getGoogleSheetData("'Contacts Raw'!A2:O", EXTERNAL_CLIENT_SHEET_ID);
-        const clients: Client[] = [];
+        // Fetch A1:Z to include headers and all potential columns
+        const rows = await getGoogleSheetData("'Contacts Raw'!A1:Z", EXTERNAL_CLIENT_SHEET_ID);
+        if (rows.length < 2) {
+            console.log("No data found in HubSpot sheet (or only headers).");
+            return [];
+        }
 
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const firstName = (row[2] || "").trim();
-            const lastName = (row[3] || "").trim();
-            const email = (row[4] || "").trim() || `hubspot-${i}@mohsyn.com`;
-            const city = (row[12] || "").trim(); // [Contacts] Serving City
-            const rawAddress = (row[14] || "").trim(); // Raw Address / Coordinates
+        const headers = rows[0].map((h: any) => String(h).toLowerCase().trim());
+        console.log("Dynamic Header Mapping:", headers.join(" | "));
+
+        // Find indices dynamically
+        const idxFirst = headers.findIndex(h => h.includes("first"));
+        const idxLast = headers.findIndex(h => h.includes("last"));
+        const idxEmail = headers.findIndex(h => h.includes("email"));
+        const idxCity = headers.findIndex(h => h.includes("serving city") || h.includes("city"));
+        // Address often has NO header, so we fallback to index 14 (Column O) if not found
+        let idxAddr = headers.findIndex(h => h.includes("address") || h.includes("raw"));
+        if (idxAddr === -1) idxAddr = 14;
+
+        console.log(`Indices found: First=${idxFirst}, Last=${idxLast}, Email=${idxEmail}, City=${idxCity}, Addr=${idxAddr}`);
+
+        // If dynamic mapping fails for critical columns, fallback to hardcoded indices
+        let dataRows = rows.slice(1);
+        let fIdx = idxFirst === -1 ? 2 : idxFirst;
+        let lIdx = idxLast === -1 ? 3 : idxLast;
+        let eIdx = idxEmail === -1 ? 4 : idxEmail;
+        let cIdx = idxCity === -1 ? 12 : idxCity;
+        let aIdx = idxAddr === -1 ? 14 : idxAddr;
+
+        const clients: Client[] = [];
+        for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const firstName = (row[fIdx] || "").trim();
+            const lastName = (lIdx !== -1 ? (row[lIdx] || "").trim() : "");
+            const email = (row[eIdx] || "").trim() || `hubspot-${i}@mohsyn.com`;
+            const city = (cIdx !== -1 ? (row[cIdx] || "").trim() : "");
+            const rawAddress = (row[aIdx] || "").trim();
 
             if (!firstName && !lastName) continue;
 
             let coords = extractCoordinates(rawAddress);
             if (!coords && rawAddress && apiKey) {
-                // geocode the first line for those without coordinates
                 const cleanAddress = rawAddress.split('\n')[0].replace(/Address: /g, '');
                 try {
                     const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanAddress + ", " + city)}&key=${apiKey}`);
@@ -242,10 +236,8 @@ export async function saveServiceToSheets(service: Service) {
     ];
 
     if (index !== -1) {
-        // Update existing row (A is column 1, row is index + 2 because of header)
         await updateGoogleSheetData(`'Final Merged Sheet(Map Usage)'!A${index + 2}:L${index + 2}`, [row]);
     } else {
-        // Append new row
         await appendGoogleSheetData("'Final Merged Sheet(Map Usage)'!A:L", [row]);
     }
 }
@@ -257,8 +249,6 @@ export async function deleteServiceFromSheets(sourceId: string) {
     if (index !== -1) {
         const auth = getAuth();
         const sheets = google.sheets({ version: "v4", auth });
-
-        // We'll clear the row. In a more advanced implementation, we might want to delete the row dimension.
         await sheets.spreadsheets.values.clear({
             spreadsheetId: SHEET_ID,
             range: `'Final Merged Sheet(Map Usage)'!A${index + 2}:L${index + 2}`,
@@ -267,9 +257,7 @@ export async function deleteServiceFromSheets(sourceId: string) {
 }
 
 export async function saveClientToSheets(client: Client) {
-    const clients = await getClientsFromSheets();
-    const index = clients.findIndex(c => c.email === client.email);
-
+    // Legacy support for manual client entry - saves to primary spreadsheet
     const row = [
         client.firstName,
         client.lastName,
@@ -278,10 +266,5 @@ export async function saveClientToSheets(client: Client) {
         client.latitude,
         client.longitude
     ];
-
-    if (index !== -1) {
-        await updateGoogleSheetData(`'Client Coordinates Update'!A${index + 2}:F${index + 2}`, [row]);
-    } else {
-        await appendGoogleSheetData("'Client Coordinates Update'!A:F", [row]);
-    }
+    await appendGoogleSheetData("'Client Coordinates Update'!A:F", [row]);
 }
