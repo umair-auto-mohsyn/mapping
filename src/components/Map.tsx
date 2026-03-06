@@ -95,7 +95,12 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
     useEffect(() => {
         if (!clusterer) return;
         clusterer.clearMarkers();
-        clusterer.addMarkers(Object.values(markers));
+        const allMarkers = Object.values(markers);
+        // Only cluster if we have many markers (e.g. > 50)
+        // This ensures researchers can see individual results clearly when filtered
+        if (allMarkers.length > 50) {
+            clusterer.addMarkers(allMarkers);
+        }
     }, [clusterer, markers]);
 
     const setMarkerRef = (marker: google.maps.Marker | null, key: string) => {
