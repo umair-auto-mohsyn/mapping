@@ -20,8 +20,7 @@ export async function GET() {
             "Gas Provider", "Gas cylinder Services", "Hardware Store", "Home Chef", "Hospital",
             "Internet Service Provider", "Laboratory", "Male Salon", "Mason Service",
             "Medical Equipment Supplier", "Medical Store", "Mineral Water home delivery",
-            "Old age houses", "Pharmacy", "Plumber", "Police Station", "Burn Emergency Hospital",
-            "Ambulance" // Added specifically as it was seen in the bug report
+            "Old age houses", "Pharmacy", "Plumber", "Police Station", "Burn Emergency Hospital"
         ];
 
         // Get unique cities and normalize them (e.g., Lodhrān -> Lodhran)
