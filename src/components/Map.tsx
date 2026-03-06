@@ -104,8 +104,16 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
     }, [clusterer, markers]);
 
     const setMarkerRef = (marker: google.maps.Marker | null, key: string) => {
-        if (marker && markers[key] !== marker) {
-            setMarkers(prev => ({ ...prev, [key]: marker }));
+        if (marker) {
+            if (markers[key] !== marker) {
+                setMarkers(prev => ({ ...prev, [key]: marker }));
+            }
+        } else if (markers[key]) {
+            setMarkers(prev => {
+                const newMarkers = { ...prev };
+                delete newMarkers[key];
+                return newMarkers;
+            });
         }
     };
 
