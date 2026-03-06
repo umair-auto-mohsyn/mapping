@@ -42,6 +42,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
     "Internet Service Provider": "#6366f1", // indigo-500
     "Male Salon": "#ec4899", // pink-500
     "Mason Service": "#8b4513", // saddlebrown
+    Other: "#eab308", // yellow-500
     // Default color for others
-    default: "#2563eb", // blue-600 (more visible)
+    default: "#eab308", // blue-600 (more visible)
 };

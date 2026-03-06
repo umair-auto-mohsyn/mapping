@@ -137,18 +137,22 @@ export default function AdminPanel({ onClose, clients, services, onDataUpdate }:
                                         </div>
                                         <div className="col-span-1 space-y-1">
                                             <label className="text-xs font-bold text-gray-500 uppercase">Primary City</label>
-                                            <select
+                                            <input
+                                                type="text"
+                                                list="city-suggestions"
+                                                placeholder="Enter or select city"
                                                 className="border-2 border-gray-100 p-3 rounded-xl w-full focus:border-blue-600 outline-none text-gray-900 font-bold bg-white"
                                                 value={editingClient.city || ""}
                                                 onChange={e => setEditingClient({ ...editingClient, city: e.target.value })}
                                                 required
-                                            >
-                                                <option value="" disabled>Select City</option>
-                                                <option value="Lahore">Lahore</option>
-                                                <option value="Islamabad">Islamabad</option>
-                                                <option value="Karachi">Karachi</option>
-                                                <option value="Rawalpindi">Rawalpindi</option>
-                                            </select>
+                                            />
+                                            <datalist id="city-suggestions">
+                                                <option value="Karachi" />
+                                                <option value="Lahore" />
+                                                <option value="Islamabad" />
+                                                <option value="Rawalpindi" />
+                                                <option value="Lodhran" />
+                                            </datalist>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3 space-y-0">
                                             <div className="space-y-1">
