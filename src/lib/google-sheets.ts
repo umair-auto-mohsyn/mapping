@@ -144,6 +144,8 @@ export async function getServicesFromSheets(): Promise<Service[]> {
 export async function getClientsFromSheets(): Promise<Client[]> {
     try {
         console.log("Fetching clients from HubSpot 'Contacts Raw'...");
+        const auth = getAuth();
+        const sheets = google.sheets({ version: "v4", auth });
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
         // Fetch A1:Z to include headers and all potential columns
@@ -182,29 +184,31 @@ export async function getClientsFromSheets(): Promise<Client[]> {
         try {
             const cacheRes = await sheets.spreadsheets.values.get({
                 spreadsheetId: EXTERNAL_CLIENT_SHEET_ID,
-                range: "'Client Coordinates'!A:C"
+                range: "'Client Coordinates'!A:F"
             });
             const cacheRows = cacheRes.data.values || [];
             if (cacheRows.length > 1) {
-                cacheRows.slice(1).forEach(row => {
-                    const email = (row[2] || "").trim().toLowerCase(); // Using Column C as Email based on image
+                cacheRows.slice(1).forEach((row: any) => {
+                    const email = (row[2] || "").trim().toLowerCase(); // Email in Column C
                     const lat = parseFloat(row[4]); // Column E
                     const lng = parseFloat(row[5]); // Column F
                     if (email && !isNaN(lat) && !isNaN(lng)) {
                         cacheMap.set(email, { lat, lng });
                     }
                 });
+                console.log(`Loaded ${cacheMap.size} coordinate pairs from cache.`);
             }
-        } catch (e) {
-            console.warn("Could not fetch coordinate cache:", (e as any).message);
+        } catch (e: any) {
+            console.warn("Could not fetch coordinate cache:", e.message);
         }
 
         for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
             const firstName = (row[fIdx] || "").trim();
             const lastName = (lIdx !== -1 ? (row[lIdx] || "").trim() : "");
-            const email = (row[eIdx] || "").trim().toLowerCase();
-            const displayEmail = (row[eIdx] || "").trim() || `hubspot-${i}@mohsyn.com`;
+            const rawEmail = (row[eIdx] || "").trim();
+            const emailKey = rawEmail.toLowerCase();
+            const displayEmail = rawEmail || `hubspot-${i}@mohsyn.com`;
             let city = (cIdx !== -1 ? (row[cIdx] || "").trim() : "");
             const rawAddress = (row[aIdx] || "").trim();
 
@@ -221,11 +225,11 @@ export async function getClientsFromSheets(): Promise<Client[]> {
                 }
             }
 
-            let coords = extractCoordinates(rawAddress);
+            let coords: { lat: number, lng: number } | null = extractCoordinates(rawAddress);
 
             // Check Cache if no coordinates in address
-            if (!coords && email && cacheMap.has(email)) {
-                coords = cacheMap.get(email)!;
+            if (!coords && emailKey && cacheMap.has(emailKey)) {
+                coords = cacheMap.get(emailKey)!;
                 console.log(`Using cached coordinates for ${firstName} ${lastName}`);
             }
 
@@ -237,20 +241,22 @@ export async function getClientsFromSheets(): Promise<Client[]> {
                     const geoData = await geoRes.json();
 
                     if (geoData.status === "OK") {
-                        coords = geoData.results[0].geometry.location;
+                        const location = geoData.results[0].geometry.location;
+                        coords = location;
                         console.log(`Geocoded [${firstName} ${lastName}]: OK`);
 
                         // SAFE OPTIMIZATION: Save to separate 'Client Coordinates' tab
                         try {
-                            // Column A: First, B: Last, C: Email, D: City, E: Lat, F: Lng
-                            const cacheRow = [firstName, lastName, email, city, coords.lat, coords.lng];
-                            await sheets.spreadsheets.values.append({
-                                spreadsheetId: EXTERNAL_CLIENT_SHEET_ID,
-                                range: "'Client Coordinates'!A:F",
-                                valueInputOption: "USER_ENTERED",
-                                requestBody: { values: [cacheRow] }
-                            });
-                            console.log(`Cached coordinates for ${firstName} ${lastName} in 'Client Coordinates' tab`);
+                            if (location) {
+                                const cacheRow = [firstName, lastName, emailKey, city, location.lat, location.lng];
+                                await sheets.spreadsheets.values.append({
+                                    spreadsheetId: EXTERNAL_CLIENT_SHEET_ID,
+                                    range: "'Client Coordinates'!A:F",
+                                    valueInputOption: "USER_ENTERED",
+                                    requestBody: { values: [cacheRow] }
+                                });
+                                console.log(`Cached coordinates for ${firstName} ${lastName} in 'Client Coordinates' tab`);
+                            }
                         } catch (cacheError: any) {
                             console.error(`Failed to cache coordinates for ${firstName}:`, cacheError.message);
                         }
@@ -273,7 +279,7 @@ export async function getClientsFromSheets(): Promise<Client[]> {
                     id: displayEmail
                 });
             } else {
-                console.log(`Skipping [${firstName} ${lastName}]: No coordinates found (Geocode fallback failed or skipped)`);
+                console.log(`Skipping [${firstName} ${lastName}]: No coordinates found`);
             }
         }
 
