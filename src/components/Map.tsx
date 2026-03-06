@@ -3,10 +3,13 @@
 import { useEffect, useState, useMemo } from "react";
 import {
     Map as GoogleMap,
-    Marker,
     InfoWindow,
     useMap,
+    AdvancedMarker,
+    useAdvancedMarkerRef,
 } from "@vis.gl/react-google-maps";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
+import type { Marker as GoogleMarker } from "@googlemaps/markerclusterer";
 import { Client, Service } from "@/types";
 import { CATEGORY_COLORS } from "@/lib/utils";
 import { MapPin, RotateCcw, Share2, Copy, CheckCircle2, Plus, Loader2 } from "lucide-react";
@@ -79,37 +82,29 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
     }, [filteredServices]);
 
     const processedDiscovered = useMemo(() => {
-        const locationMap: { [key: string]: number } = {};
-
         // Filter out discovered places that are already in any existing service
         const allSourceIds = new Set(allServices.map(s => s.source_id));
-        const filteredDiscovered = discoveredServices.filter(p => !allSourceIds.has(p.place_id));
+        return discoveredServices.filter(p => !allSourceIds.has(p.place_id));
+    }, [discoveredServices, allServices]);
 
-        // Account for existing services to avoid overlapping with them too
-        // (Use filteredServices for jitter calculation to only jitter against visible ones)
-        filteredServices.forEach(s => {
-            const posKey = `${s.latitude.toFixed(6)},${s.longitude.toFixed(6)}`;
-            locationMap[posKey] = (locationMap[posKey] || 0) + 1;
-        });
+    // Clustering logic
+    const [markers, setMarkers] = useState<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
+    const clusterer = useMemo(() => {
+        if (!map) return null;
+        return new MarkerClusterer({ map });
+    }, [map]);
 
-        return filteredDiscovered.map((place) => {
-            const posKey = `${place.geometry.location.lat.toFixed(6)},${place.geometry.location.lng.toFixed(6)}`;
-            locationMap[posKey] = (locationMap[posKey] || 0) + 1;
-            const count = locationMap[posKey];
+    useEffect(() => {
+        if (!clusterer) return;
+        clusterer.clearMarkers();
+        clusterer.addMarkers(Object.values(markers));
+    }, [clusterer, markers]);
 
-            let lat = place.geometry.location.lat;
-            let lng = place.geometry.location.lng;
-
-            if (count > 1) {
-                const angle = (count - 1) * (360 / 8) * (Math.PI / 180);
-                const spread = 0.0001 * (1 + Math.floor((count - 1) / 8));
-                lat += Math.sin(angle) * spread;
-                lng += Math.cos(angle) * spread;
-            }
-
-            return { ...place, displayPos: { lat, lng } };
-        });
-    }, [discoveredServices, filteredServices]);
+    const setMarkerRef = (marker: google.maps.marker.AdvancedMarkerElement | null, key: string) => {
+        if (marker && markers[key] !== marker) {
+            setMarkers(prev => ({ ...prev, [key]: marker }));
+        }
+    };
 
     const handleEnrichAndSave = async (place: any) => {
         setIsEnriching(true);
@@ -244,43 +239,66 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                 )}
 
                 {/* Service Markers */}
-                {processedServices.map((service, index) => (
-                    <Marker
-                        key={`service-${service.source_id || 'no-id'}-${service.latitude}-${service.longitude}-${index}`}
-                        position={service.displayPos}
-                        title={service.entity_name}
-                        onClick={() => setSelectedService(service)}
-                        icon={{
-                            path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
-                            fillColor: CATEGORY_COLORS[service.category] || CATEGORY_COLORS.default,
-                            fillOpacity: 1,
-                            strokeWeight: 1.5,
-                            strokeColor: "#ffffff",
-                            scale: 1.2,
-                            anchor: new google.maps.Point(12, 22),
-                        }}
-                    />
-                ))}
+                {processedServices.map((service, index) => {
+                    const key = `service-${service.source_id || 'no-id'}-${service.latitude}-${service.longitude}-${index}`;
+                    return (
+                        <AdvancedMarker
+                            key={key}
+                            ref={(marker) => setMarkerRef(marker, key)}
+                            position={service.displayPos}
+                            title={service.entity_name}
+                            onClick={() => setSelectedService(service)}
+                        >
+                            <div
+                                style={{
+                                    backgroundColor: CATEGORY_COLORS[service.category] || CATEGORY_COLORS.default,
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '50%',
+                                    border: '2px solid white',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <MapPin size={14} color="white" />
+                            </div>
+                        </AdvancedMarker>
+                    );
+                })}
 
                 {/* Discovered Markers (Yellow) */}
-                {processedDiscovered.map((place) => (
-                    <Marker
-                        key={`discovered-${place.place_id}`}
-                        position={place.displayPos}
-                        title={place.name}
-                        onClick={() => setSelectedDiscoveredPlace(place)}
-                        zIndex={1000}
-                        icon={{
-                            path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
-                            fillColor: "#eab308", // yellow-500
-                            fillOpacity: 1,
-                            strokeWeight: 1.5,
-                            strokeColor: "#ffffff",
-                            scale: 1.2,
-                            anchor: new google.maps.Point(12, 22),
-                        }}
-                    />
-                ))}
+                {processedDiscovered.map((place) => {
+                    const key = `discovered-${place.place_id}`;
+                    const displayPos = { lat: place.geometry.location.lat, lng: place.geometry.location.lng };
+                    return (
+                        <AdvancedMarker
+                            key={key}
+                            ref={(marker) => setMarkerRef(marker, key)}
+                            position={displayPos}
+                            title={place.name}
+                            onClick={() => setSelectedDiscoveredPlace({ ...place, displayPos })}
+                            zIndex={1000}
+                        >
+                            <div
+                                style={{
+                                    backgroundColor: '#eab308',
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '50%',
+                                    border: '2px solid white',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Plus size={14} color="white" />
+                            </div>
+                        </AdvancedMarker>
+                    );
+                })}
 
                 {/* Info Window */}
                 {selectedService && (
