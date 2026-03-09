@@ -437,6 +437,45 @@ export async function checkExtractionCooldown(identifier: string): Promise<{ isL
     return { isLocked: false };
 }
 
+/**
+ * Returns an array of category names that are currently on cooldown for a given identifier.
+ */
+export async function getLockedCategories(identifier: string): Promise<{ category: string, lockedUntil: string }[]> {
+    const logs = await getExtractionLog();
+    if (logs.length === 0) return [];
+
+    const now = new Date();
+    const lockedMap = new Map<string, Date>();
+
+    // Scan all logs for this identifier
+    logs.forEach(row => {
+        const rowIdentifier = (row[2] || "").trim().toLowerCase();
+        if (rowIdentifier === identifier.toLowerCase()) {
+            const timestamp = new Date(row[0]);
+            const categories = (row[3] || "").split(",").map((c: string) => c.trim());
+
+            const diffTime = now.getTime() - timestamp.getTime();
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            if (diffDays < 30) {
+                const lockedUntil = new Date(timestamp.getTime() + (30 * 24 * 60 * 60 * 1000));
+                categories.forEach((cat: string) => {
+                    if (!cat) return;
+                    const existing = lockedMap.get(cat);
+                    if (!existing || lockedUntil > existing) {
+                        lockedMap.set(cat, lockedUntil);
+                    }
+                });
+            }
+        }
+    });
+
+    return Array.from(lockedMap.entries()).map(([category, date]) => ({
+        category,
+        lockedUntil: date.toLocaleDateString()
+    }));
+}
+
 export async function logExtraction(type: 'CITY' | 'CLIENT', identifier: string, categories: string[]) {
     const auth = getAuth();
     const sheets = google.sheets({ version: "v4", auth });

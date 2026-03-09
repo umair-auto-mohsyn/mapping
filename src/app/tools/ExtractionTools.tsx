@@ -120,14 +120,16 @@ function SearchableMultiSelect({
     onToggle,
     placeholder,
     disabled,
-    max = 4
+    max = 4,
+    lockedOptions = []
 }: {
     options: string[],
     selected: string[],
     onToggle: (val: string) => void,
     placeholder: string,
     disabled?: boolean,
-    max?: number
+    max?: number,
+    lockedOptions?: { category: string, lockedUntil: string }[]
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -206,27 +208,37 @@ function SearchableMultiSelect({
                     <div className="max-h-60 overflow-y-auto p-1">
                         {filtered.length > 0 ? filtered.map(opt => {
                             const isSelected = selected.includes(opt);
+                            const lock = lockedOptions.find(l => l.category === opt);
                             const isLimitReached = !isSelected && selected.length >= max;
+                            const isLocked = !!lock;
+
                             return (
                                 <div
                                     key={opt}
+                                    title={isLocked ? `Locked until ${lock.lockedUntil} (30-day cooldown)` : ""}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (!isLimitReached) {
+                                        if (!isLimitReached && !isLocked) {
                                             handleToggle(opt);
                                         }
                                     }}
-                                    className={`px-3 py-2 text-sm cursor-pointer rounded-lg transition-colors flex items-center justify-between mb-0.5 ${isSelected ? 'bg-blue-600 text-white font-bold' :
-                                            isLimitReached ? 'text-gray-300 cursor-not-allowed grayscale' : 'text-gray-700 hover:bg-gray-100'
+                                    className={`px-3 py-2 text-sm cursor-pointer rounded-lg transition-colors flex items-center justify-between mb-0.5 group relative ${isSelected ? 'bg-blue-600 text-white font-bold' :
+                                            (isLimitReached || isLocked) ? 'text-gray-300 cursor-not-allowed grayscale' : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                 >
                                     <span className="flex items-center gap-2">
                                         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-white border-white' : 'bg-white border-gray-300'}`}>
                                             {isSelected && <Check size={12} className="text-blue-600" />}
+                                            {isLocked && <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />}
                                         </div>
                                         {opt}
                                     </span>
                                     {isLimitReached && <span className="text-[10px] font-bold opacity-50 uppercase">Limit Reached</span>}
+                                    {isLocked && (
+                                        <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md uppercase tracking-tighter">
+                                            Cooldown until {lock.lockedUntil}
+                                        </span>
+                                    )}
                                 </div>
                             );
                         }) : (
@@ -247,6 +259,7 @@ export default function ExtractionTools() {
     // --- State: City Extraction ---
     const [cityInput, setCityInput] = useState("");
     const [cityCategories, setCityCategories] = useState<string[]>([]);
+    const [cityLockedCats, setCityLockedCats] = useState<{ category: string, lockedUntil: string }[]>([]);
     const [isExtractingCity, setIsExtractingCity] = useState(false);
     const [cityProgress, setCityProgress] = useState(0);
     const [cityResult, setCityResult] = useState<{ status: 'success' | 'error' | 'warning', message: string, count?: number } | null>(null);
@@ -254,6 +267,7 @@ export default function ExtractionTools() {
     // --- State: Client Extraction ---
     const [selectedClientStr, setSelectedClientStr] = useState("");
     const [clientCategories, setClientCategories] = useState<string[]>([]);
+    const [clientLockedCats, setClientLockedCats] = useState<{ category: string, lockedUntil: string }[]>([]);
     const [isExtractingClient, setIsExtractingClient] = useState(false);
     const [clientProgress, setClientProgress] = useState(0);
     const [clientResult, setClientResult] = useState<{ status: 'success' | 'error' | 'warning', message: string, count?: number } | null>(null);
@@ -269,6 +283,32 @@ export default function ExtractionTools() {
             .catch(err => console.error("Error fetching clients:", err))
             .finally(() => setIsLoadingClients(false));
     }, []);
+
+    // Fetch Cooldowns for City
+    useEffect(() => {
+        if (!cityInput) {
+            setCityLockedCats([]);
+            return;
+        }
+        fetch(`/api/tools/cooldown?target=${encodeURIComponent(cityInput)}`)
+            .then(res => res.json())
+            .then(data => setCityLockedCats(data.lockedCategories || []))
+            .catch(err => console.error("Error fetching city cooldowns:", err));
+    }, [cityInput]);
+
+    // Fetch Cooldowns for Client
+    useEffect(() => {
+        if (!selectedClientStr) {
+            setClientLockedCats([]);
+            return;
+        }
+        const client = clients.find(c => `${c.firstName} ${c.lastName} (${c.city})` === selectedClientStr);
+        const identifier = client?.id || selectedClientStr;
+        fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}`)
+            .then(res => res.json())
+            .then(data => setClientLockedCats(data.lockedCategories || []))
+            .catch(err => console.error("Error fetching client cooldowns:", err));
+    }, [selectedClientStr, clients]);
 
     // Simulated Progress Hooks
     useEffect(() => {
@@ -331,9 +371,13 @@ export default function ExtractionTools() {
                 } else {
                     setCityResult({
                         status: 'success',
-                        message: `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped. 30-day cooldown started.`,
+                        message: `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped (duplicates). 30-day cooldown started.`,
                         count: data.savedCount
                     });
+                    // Refresh cooldowns
+                    fetch(`/api/tools/cooldown?target=${encodeURIComponent(cityInput)}`)
+                        .then(res => res.json())
+                        .then(d => setCityLockedCats(d.lockedCategories || []));
                 }
                 setIsExtractingCity(false);
             }, 500);
@@ -381,9 +425,14 @@ export default function ExtractionTools() {
                 } else {
                     setClientResult({
                         status: 'success',
-                        message: `Extracted ${data.savedCount} new services. 30-day cooldown started.`,
+                        message: `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped (duplicates). 30-day cooldown started.`,
                         count: data.savedCount
                     });
+                    // Refresh cooldowns
+                    const identifier = client?.id || selectedClientStr;
+                    fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}`)
+                        .then(res => res.json())
+                        .then(d => setClientLockedCats(d.lockedCategories || []));
                 }
                 setIsExtractingClient(false);
             }, 500);
@@ -408,7 +457,7 @@ export default function ExtractionTools() {
                     </div>
                     <div>
                         <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">City-Wide Extraction</h2>
-                        <p className="text-sm text-gray-500">Scan entire cities for high-volume data. 30-day cooldown applies after use.</p>
+                        <p className="text-sm text-gray-500">Scan entire cities for high-volume data. 30-day cooldown applies per category.</p>
                     </div>
                 </div>
 
@@ -469,8 +518,8 @@ export default function ExtractionTools() {
                     {/* Result Message */}
                     {cityResult && (
                         <div className={`p-5 rounded-2xl flex items-start gap-4 border animate-in zoom-in-95 duration-200 ${cityResult.status === 'success' ? 'bg-green-50 border-green-200 text-green-900' :
-                                cityResult.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
-                                    'bg-red-50 border-red-200 text-red-900'
+                            cityResult.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
+                                'bg-red-50 border-red-200 text-red-900'
                             }`}>
                             <div className="mt-1">
                                 {cityResult.status === 'success' ? <CheckCircle2 className="text-green-600" /> :
@@ -555,8 +604,8 @@ export default function ExtractionTools() {
                     {/* Result Message */}
                     {clientResult && (
                         <div className={`p-5 rounded-2xl flex items-start gap-4 border animate-in zoom-in-95 duration-200 ${clientResult.status === 'success' ? 'bg-green-50 border-green-200 text-green-900' :
-                                clientResult.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
-                                    'bg-red-50 border-red-200 text-red-900'
+                            clientResult.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
+                                'bg-red-50 border-red-200 text-red-900'
                             }`}>
                             <div className="mt-1">
                                 {clientResult.status === 'success' ? <CheckCircle2 className="text-green-600" /> :
