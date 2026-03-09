@@ -205,7 +205,7 @@ function SearchableMultiSelect({
                             onClick={(e) => e.stopPropagation()}
                         />
                     </div>
-                    <div className="max-h-60 overflow-y-auto p-1">
+                    <div className="max-h-96 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200">
                         {filtered.length > 0 ? filtered.map(opt => {
                             const isSelected = selected.includes(opt);
                             const lock = lockedOptions.find(l => l.category === opt);

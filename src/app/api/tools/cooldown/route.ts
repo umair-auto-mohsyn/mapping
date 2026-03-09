@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getLockedCategories } from "@/lib/google-sheets";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
     try {
         const session = await getServerSession(authOptions);

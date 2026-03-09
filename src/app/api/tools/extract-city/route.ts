@@ -6,6 +6,8 @@ import { Service } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { CATEGORY_SEARCH_CONFIG } from "@/lib/google-places";
 
+export const dynamic = "force-dynamic";
+
 const GMAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAX_CITY_RECORDS = 2000;
 
