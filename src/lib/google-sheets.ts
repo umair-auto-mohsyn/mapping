@@ -401,8 +401,10 @@ export async function saveMultipleServicesToSheets(services: Service[]) {
 
 export async function getExtractionLog(): Promise<any[][]> {
     try {
-        // Try to fetch from the primary sheet where results are stored
-        return await getGoogleSheetData("'Extraction Log'!A2:D");
+        // Use a more inclusive range query
+        const data = await getGoogleSheetData("'Extraction Log'!A:D");
+        if (!data || data.length <= 1) return []; // Just header or empty
+        return data.slice(1); // Remove header
     } catch (e: any) {
         console.warn("Extraction Log sheet not found or empty:", e.message);
         return [];
@@ -413,8 +415,10 @@ export async function checkExtractionCooldown(identifier: string): Promise<{ isL
     const logs = await getExtractionLog();
     if (logs.length === 0) return { isLocked: false };
 
+    const targetId = identifier.trim().toLowerCase();
+
     // Find the latest entry for this identifier
-    const relevantLogs = logs.filter(row => (row[2] || "").trim().toLowerCase() === identifier.toLowerCase());
+    const relevantLogs = logs.filter(row => (row[2] || "").trim().toLowerCase() === targetId);
     if (relevantLogs.length === 0) return { isLocked: false };
 
     // Sort by timestamp (Column A is ISO string)
@@ -423,7 +427,7 @@ export async function checkExtractionCooldown(identifier: string): Promise<{ isL
     const lastDate = new Date(latest[0]);
     const now = new Date();
 
-    const diffTime = Math.abs(now.getTime() - lastDate.getTime());
+    const diffTime = now.getTime() - lastDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 30) {
@@ -439,6 +443,7 @@ export async function checkExtractionCooldown(identifier: string): Promise<{ isL
 
 /**
  * Returns an array of category names that are currently on cooldown for a given identifier.
+ * Uses robust case-insensitive comparison.
  */
 export async function getLockedCategories(identifier: string): Promise<{ category: string, lockedUntil: string }[]> {
     const logs = await getExtractionLog();
@@ -446,13 +451,16 @@ export async function getLockedCategories(identifier: string): Promise<{ categor
 
     const now = new Date();
     const lockedMap = new Map<string, Date>();
+    const targetId = identifier.trim().toLowerCase();
 
     // Scan all logs for this identifier
     logs.forEach(row => {
         const rowIdentifier = (row[2] || "").trim().toLowerCase();
-        if (rowIdentifier === identifier.toLowerCase()) {
+        if (rowIdentifier === targetId) {
             const timestamp = new Date(row[0]);
-            const categories = (row[3] || "").split(",").map((c: string) => c.trim());
+            // Extract categories from column D (row[3])
+            const categoriesContent = (row[3] || "");
+            const categories = categoriesContent.split(",").map((c: string) => c.trim()).filter(Boolean);
 
             const diffTime = now.getTime() - timestamp.getTime();
             const diffDays = diffTime / (1000 * 60 * 60 * 24);
@@ -460,10 +468,10 @@ export async function getLockedCategories(identifier: string): Promise<{ categor
             if (diffDays < 30) {
                 const lockedUntil = new Date(timestamp.getTime() + (30 * 24 * 60 * 60 * 1000));
                 categories.forEach((cat: string) => {
-                    if (!cat) return;
-                    const existing = lockedMap.get(cat);
+                    const catKey = cat.trim(); // Keep original casing for key but compare smartly
+                    const existing = lockedMap.get(catKey);
                     if (!existing || lockedUntil > existing) {
-                        lockedMap.set(cat, lockedUntil);
+                        lockedMap.set(catKey, lockedUntil);
                     }
                 });
             }
@@ -481,18 +489,50 @@ export async function logExtraction(type: 'CITY' | 'CLIENT', identifier: string,
     const sheets = google.sheets({ version: "v4", auth });
 
     const timestamp = new Date().toISOString();
-    const row = [timestamp, type, identifier, categories.join(", ")];
+    const row = [timestamp, type, identifier.trim(), categories.join(", ")];
 
     try {
+        // Ensure sheet exists by trying to append to it
         await sheets.spreadsheets.values.append({
             spreadsheetId: SHEET_ID,
             range: "'Extraction Log'!A:D",
             valueInputOption: "USER_ENTERED",
             requestBody: { values: [row] }
         });
-        console.log(`[Log] Extraction recorded for ${identifier} (${type})`);
+        console.log(`[Log] Extraction recorded for ${identifier} (${type}): ${categories.join(", ")}`);
     } catch (e: any) {
+        if (e.message.includes("Unable to parse range")) {
+            // Sheet probably doesn't exist, try to create it
+            try {
+                await sheets.spreadsheets.batchUpdate({
+                    spreadsheetId: SHEET_ID,
+                    requestBody: {
+                        requests: [{
+                            addSheet: {
+                                properties: { title: "Extraction Log" }
+                            }
+                        }]
+                    }
+                });
+                // Add header
+                await sheets.spreadsheets.values.update({
+                    spreadsheetId: SHEET_ID,
+                    range: "'Extraction Log'!A1:D1",
+                    valueInputOption: "USER_ENTERED",
+                    requestBody: { values: [["Timestamp", "Type", "Identifier", "Categories"]] }
+                });
+                // Append data again
+                await sheets.spreadsheets.values.append({
+                    spreadsheetId: SHEET_ID,
+                    range: "'Extraction Log'!A:D",
+                    valueInputOption: "USER_ENTERED",
+                    requestBody: { values: [row] }
+                });
+                return;
+            } catch (err: any) {
+                console.error("Failed to auto-create Extraction Log sheet:", err.message);
+            }
+        }
         console.error("Failed to log extraction:", e.message);
-        // If sheet doesn't exist, we might need to create it, but for now we just fail gracefully
     }
 }

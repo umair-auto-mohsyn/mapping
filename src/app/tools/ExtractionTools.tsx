@@ -205,7 +205,7 @@ function SearchableMultiSelect({
                             onClick={(e) => e.stopPropagation()}
                         />
                     </div>
-                    <div className="max-h-96 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200">
+                    <div className="max-h-[400px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200 rounded-b-xl bg-white">
                         {filtered.length > 0 ? filtered.map(opt => {
                             const isSelected = selected.includes(opt);
                             const lock = lockedOptions.find(l => l.category.toLowerCase() === opt.toLowerCase());
@@ -293,7 +293,13 @@ export default function ExtractionTools() {
         const t = new Date().getTime();
         fetch(`/api/tools/cooldown?target=${encodeURIComponent(cityInput)}&t=${t}`)
             .then(res => res.json())
-            .then(data => setCityLockedCats(data.lockedCategories || []))
+            .then(data => {
+                const locked = data.lockedCategories || [];
+                setCityLockedCats(locked);
+                // Auto-deselect locked categories
+                const lockedNames = new Set(locked.map((l: any) => l.category.toLowerCase()));
+                setCityCategories(prev => prev.filter(cat => !lockedNames.has(cat.toLowerCase())));
+            })
             .catch(err => console.error("Error fetching city cooldowns:", err));
     }, [cityInput]);
 
@@ -308,7 +314,13 @@ export default function ExtractionTools() {
         const t = new Date().getTime();
         fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}&t=${t}`)
             .then(res => res.json())
-            .then(data => setClientLockedCats(data.lockedCategories || []))
+            .then(data => {
+                const locked = data.lockedCategories || [];
+                setClientLockedCats(locked);
+                // Auto-deselect locked categories
+                const lockedNames = new Set(locked.map((l: any) => l.category.toLowerCase()));
+                setClientCategories(prev => prev.filter(cat => !lockedNames.has(cat.toLowerCase())));
+            })
             .catch(err => console.error("Error fetching client cooldowns:", err));
     }, [selectedClientStr, clients]);
 
