@@ -19,7 +19,7 @@ const TARGET_CATEGORIES = [
 export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || !["ADMIN", "EDITOR"].includes(session.user.role)) {
+        if (!session || !session.user || !session.user.role || !["ADMIN", "EDITOR"].includes(session.user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
