@@ -192,7 +192,7 @@ function SearchableMultiSelect({
             </div>
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute z-[100] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-2 border-b bg-gray-50 flex items-center gap-2">
                         <Search size={14} className="text-gray-400 ml-1" />
                         <input
