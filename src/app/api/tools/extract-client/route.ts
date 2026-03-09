@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getServicesFromSheets, saveMultipleServicesToSheets, checkExtractionCooldown, logExtraction } from "@/lib/google-sheets";
+import { getServicesFromSheets, saveMultipleServicesToSheets, getLockedCategories, logExtraction } from "@/lib/google-sheets";
 import { Service } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { CATEGORY_SEARCH_CONFIG } from "@/lib/google-places";
@@ -21,18 +21,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Latitude and Longitude required" }, { status: 400 });
         }
 
-        // 1. Check Cooldown
+        // 1. Check Granular Cooldowns
         const identifier = clientId || `${lat},${lng}`;
-        const cooldown = await checkExtractionCooldown(identifier);
-        if (cooldown.isLocked) {
-            return NextResponse.json({
-                error: `Client/Location is on cooldown. Available in ${cooldown.remainingDays} days (Last: ${cooldown.lastDate}).`
-            }, { status: 403 });
-        }
+        const locked = await getLockedCategories(identifier);
+        const lockedNames = new Set(locked.map(l => l.category));
 
         // 2. Validate categories
         if (!categories || !Array.isArray(categories) || categories.length === 0) {
             return NextResponse.json({ error: "At least one category required" }, { status: 400 });
+        }
+
+        const requestedLocked = categories.filter(c => lockedNames.has(c));
+        if (requestedLocked.length > 0) {
+            return NextResponse.json({
+                error: `Categories on cooldown for this location: ${requestedLocked.join(", ")}. Please wait 30 days.`
+            }, { status: 403 });
         }
         if (categories.length > 4) {
             return NextResponse.json({ error: "Maximum 4 categories allowed at a time" }, { status: 400 });

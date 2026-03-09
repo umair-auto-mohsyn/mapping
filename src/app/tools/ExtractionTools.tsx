@@ -89,7 +89,7 @@ function SearchableSelect({
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="max-h-60 overflow-y-auto">
+                    <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
                         {filtered.length > 0 ? filtered.map(opt => (
                             <div
                                 key={opt}
@@ -223,7 +223,7 @@ function SearchableMultiSelect({
                                         }
                                     }}
                                     className={`px-3 py-2 text-sm cursor-pointer rounded-lg transition-colors flex items-center justify-between mb-0.5 group relative ${isSelected ? 'bg-blue-600 text-white font-bold' :
-                                            (isLimitReached || isLocked) ? 'text-gray-300 cursor-not-allowed grayscale' : 'text-gray-700 hover:bg-gray-100'
+                                        (isLimitReached || isLocked) ? 'text-gray-300 cursor-not-allowed grayscale' : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                 >
                                     <span className="flex items-center gap-2">
@@ -496,6 +496,7 @@ export default function ExtractionTools() {
                             placeholder="Search & select up to 4 categories..."
                             disabled={isExtractingCity}
                             max={4}
+                            lockedOptions={cityLockedCats}
                         />
                     </div>
 
@@ -582,6 +583,7 @@ export default function ExtractionTools() {
                             placeholder="Search & select up to 4 categories..."
                             disabled={isExtractingClient}
                             max={4}
+                            lockedOptions={clientLockedCats}
                         />
                     </div>
 
