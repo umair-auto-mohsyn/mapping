@@ -192,7 +192,13 @@ function SearchableMultiSelect({
             </div>
 
             {isOpen && !disabled && (
-                <div className="absolute z-[100] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <div
+                    className={`absolute z-[100] w-full bg-white border border-gray-200 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 ${
+                        // Simple heuristic: if container is below halfway, open up
+                        containerRef.current && containerRef.current.getBoundingClientRect().top > window.innerHeight / 2
+                            ? 'bottom-full mb-2' : 'top-full mt-1'
+                        }`}
+                >
                     <div className="p-2 border-b bg-gray-50 flex items-center gap-2">
                         <Search size={14} className="text-gray-400 ml-1" />
                         <input
@@ -205,7 +211,7 @@ function SearchableMultiSelect({
                             onClick={(e) => e.stopPropagation()}
                         />
                     </div>
-                    <div className="max-h-[400px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200 rounded-b-xl bg-white">
+                    <div className="max-h-[300px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200 rounded-b-xl bg-white">
                         {filtered.length > 0 ? filtered.map(opt => {
                             const isSelected = selected.includes(opt);
                             const lock = lockedOptions.find(l => l.category.toLowerCase() === opt.toLowerCase());
@@ -222,21 +228,21 @@ function SearchableMultiSelect({
                                             handleToggle(opt);
                                         }
                                     }}
-                                    className={`px-3 py-2 text-sm cursor-pointer rounded-lg transition-colors flex items-center justify-between mb-0.5 group relative ${isSelected ? 'bg-blue-600 text-white font-bold' :
-                                        (isLimitReached || isLocked) ? 'text-gray-300 cursor-not-allowed grayscale' : 'text-gray-700 hover:bg-gray-100'
+                                    className={`px-3 py-2.5 text-sm cursor-pointer rounded-lg transition-all flex items-center justify-between mb-0.5 group relative ${isSelected ? 'bg-blue-600 text-white font-bold shadow-md transform scale-[1.02]' :
+                                        (isLimitReached || isLocked) ? 'text-gray-300 cursor-not-allowed opacity-60' : 'text-gray-700 hover:bg-gray-100 hover:pl-4'
                                         }`}
                                 >
                                     <span className="flex items-center gap-2">
                                         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-white border-white' : 'bg-white border-gray-300'}`}>
                                             {isSelected && <Check size={12} className="text-blue-600" />}
-                                            {isLocked && <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />}
+                                            {isLocked && <X size={10} className="text-red-400" />}
                                         </div>
-                                        {opt}
+                                        <span className={isLocked ? 'line-through opacity-50' : ''}>{opt}</span>
                                     </span>
-                                    {isLimitReached && <span className="text-[10px] font-bold opacity-50 uppercase">Limit Reached</span>}
+                                    {isLimitReached && !isLocked && <span className="text-[10px] font-bold opacity-50 uppercase">Limit Reached</span>}
                                     {isLocked && (
-                                        <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md uppercase tracking-tighter">
-                                            Cooldown until {lock.lockedUntil}
+                                        <span className="text-[9px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md uppercase tracking-tighter border border-red-100">
+                                            Locked
                                         </span>
                                     )}
                                 </div>
@@ -284,44 +290,50 @@ export default function ExtractionTools() {
             .finally(() => setIsLoadingClients(false));
     }, []);
 
-    // Fetch Cooldowns for City
-    useEffect(() => {
-        if (!cityInput) {
+    // Unified Refresh Function for City
+    const refreshCityCooldowns = (city: string) => {
+        if (!city) {
             setCityLockedCats([]);
             return;
         }
         const t = new Date().getTime();
-        fetch(`/api/tools/cooldown?target=${encodeURIComponent(cityInput)}&t=${t}`)
+        fetch(`/api/tools/cooldown?target=${encodeURIComponent(city)}&t=${t}`)
             .then(res => res.json())
             .then(data => {
                 const locked = data.lockedCategories || [];
                 setCityLockedCats(locked);
-                // Auto-deselect locked categories
                 const lockedNames = new Set(locked.map((l: any) => l.category.toLowerCase()));
                 setCityCategories(prev => prev.filter(cat => !lockedNames.has(cat.toLowerCase())));
             })
             .catch(err => console.error("Error fetching city cooldowns:", err));
-    }, [cityInput]);
+    };
 
-    // Fetch Cooldowns for Client
-    useEffect(() => {
-        if (!selectedClientStr) {
+    // Unified Refresh Function for Client
+    const refreshClientCooldowns = (identifier: string) => {
+        if (!identifier) {
             setClientLockedCats([]);
             return;
         }
-        const client = clients.find(c => `${c.firstName} ${c.lastName} (${c.city})` === selectedClientStr);
-        const identifier = client?.id || selectedClientStr;
         const t = new Date().getTime();
         fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}&t=${t}`)
             .then(res => res.json())
             .then(data => {
                 const locked = data.lockedCategories || [];
                 setClientLockedCats(locked);
-                // Auto-deselect locked categories
                 const lockedNames = new Set(locked.map((l: any) => l.category.toLowerCase()));
                 setClientCategories(prev => prev.filter(cat => !lockedNames.has(cat.toLowerCase())));
             })
             .catch(err => console.error("Error fetching client cooldowns:", err));
+    };
+
+    useEffect(() => {
+        refreshCityCooldowns(cityInput);
+    }, [cityInput]);
+
+    useEffect(() => {
+        const client = clients.find(c => `${c.firstName} ${c.lastName} (${c.city})` === selectedClientStr);
+        const identifier = client?.id || selectedClientStr;
+        refreshClientCooldowns(identifier);
     }, [selectedClientStr, clients]);
 
     // Simulated Progress Hooks
@@ -388,10 +400,8 @@ export default function ExtractionTools() {
                         message: `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped (duplicates). 30-day cooldown started.`,
                         count: data.savedCount
                     });
-                    // Refresh cooldowns
-                    fetch(`/api/tools/cooldown?target=${encodeURIComponent(cityInput)}`)
-                        .then(res => res.json())
-                        .then(d => setCityLockedCats(d.lockedCategories || []));
+                    // Refresh cooldowns immediately
+                    refreshCityCooldowns(cityInput);
                 }
                 setIsExtractingCity(false);
             }, 500);
@@ -442,12 +452,10 @@ export default function ExtractionTools() {
                         message: `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped (duplicates). 30-day cooldown started.`,
                         count: data.savedCount
                     });
-                    // Refresh cooldowns
-                    const t = new Date().getTime();
+                    // Refresh cooldowns immediately
+                    const client = clients.find(c => `${c.firstName} ${c.lastName} (${c.city})` === selectedClientStr);
                     const identifier = client?.id || selectedClientStr;
-                    fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}&t=${t}`)
-                        .then(res => res.json())
-                        .then(d => setClientLockedCats(d.lockedCategories || []));
+                    refreshClientCooldowns(identifier);
                 }
                 setIsExtractingClient(false);
             }, 500);
