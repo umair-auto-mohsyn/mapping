@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Loader2, Database, MapPin, CheckCircle2, AlertTriangle, ArrowRight, Search, X, Check } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Loader2, Database, MapPin, CheckCircle2, AlertTriangle, ArrowRight, Search, X, Check, ChevronDown, Filter } from "lucide-react";
 
 const PAKISTAN_CITIES = [
     "Abbottabad", "Ahmedpur East", "Arif Wala", "Attock", "Badin", "Bahawalnagar",
@@ -20,14 +20,13 @@ const PAKISTAN_CITIES = [
     "Taxila", "Turbat", "Umerkot", "Vehari", "Wah Cantonment", "Wazirabad"
 ];
 
-const TARGET_CATEGORIES = [
-    "Hospital",
-    "Burn Emergency Hospital",
-    "Pharmacy",
-    "Fire Station",
-    "Police Station",
-    "Ambulance Service",
-    "Medical Store"
+const ALL_CATEGORIES = [
+    "AC Technition", "Ambulance Service", "Bakery", "Car Repair", "Child day care",
+    "Clinic", "Electrician", "Electricity Provider Office", "Female Salon", "Fire Station",
+    "Flower Shops", "Gas Provider", "Gas cylinder Services", "Hardware Store", "Home Chef",
+    "Hospital", "Internet Service Provider", "Laboratory", "Male Salon", "Mason Service",
+    "Medical Equipment Supplier", "Medical Store", "Mineral Water home delivery", "Old age houses",
+    "Pharmacy", "Plumber", "Police Station", "Burn Emergency Hospital"
 ];
 
 // --- Sub-Component: Searchable Select ---
@@ -48,13 +47,24 @@ function SearchableSelect({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const filtered = useMemo(() =>
         options.filter(opt => opt.toLowerCase().includes(search.toLowerCase())),
         [options, search]);
 
     return (
-        <div className="relative flex-1">
+        <div className="relative flex-1" ref={containerRef}>
             <div
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 className={`flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500'}`}
@@ -63,17 +73,18 @@ function SearchableSelect({
                 <span className={`flex-1 font-medium ${value ? 'text-gray-900' : 'text-gray-400'}`}>
                     {value || placeholder}
                 </span>
-                <Search size={16} className="text-gray-400" />
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && !disabled && (
                 <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-2 border-b">
+                    <div className="p-2 border-b bg-gray-50 flex items-center gap-2">
+                        <Search size={14} className="text-gray-400 ml-1" />
                         <input
                             autoFocus
                             type="text"
                             placeholder="Type to search..."
-                            className="w-full px-3 py-2 bg-gray-50 border-none rounded-lg focus:ring-0 text-sm"
+                            className="w-full px-2 py-1.5 bg-transparent border-none rounded-lg focus:ring-0 text-sm"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -94,6 +105,132 @@ function SearchableSelect({
                             </div>
                         )) : (
                             <div className="px-4 py-3 text-sm text-gray-400 text-center italic">No results found</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// --- Sub-Component: Searchable Multi-Select ---
+function SearchableMultiSelect({
+    options,
+    selected,
+    onToggle,
+    placeholder,
+    disabled,
+    max = 4
+}: {
+    options: string[],
+    selected: string[],
+    onToggle: (val: string) => void,
+    placeholder: string,
+    disabled?: boolean,
+    max?: number
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const filtered = useMemo(() =>
+        options.filter(opt => opt.toLowerCase().includes(search.toLowerCase())),
+        [options, search]);
+
+    const handleToggle = (opt: string) => {
+        onToggle(opt);
+    };
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <div
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`flex flex-wrap items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer transition-all min-h-[54px] ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-400'}`}
+            >
+                <div className="bg-gray-200 p-1.5 rounded-lg text-gray-500 shrink-0">
+                    <Filter size={16} />
+                </div>
+
+                {selected.length === 0 ? (
+                    <span className="text-gray-400 font-medium flex-1">{placeholder}</span>
+                ) : (
+                    <div className="flex flex-wrap gap-1.5 flex-1">
+                        {selected.map(item => (
+                            <span key={item} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-[11px] font-black uppercase rounded-lg border border-blue-200">
+                                {item}
+                                <X
+                                    size={12}
+                                    className="cursor-pointer hover:text-blue-900"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggle(item);
+                                    }}
+                                />
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex items-center gap-2 shrink-0 ml-auto">
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {selected.length}/{max}
+                    </span>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </div>
+            </div>
+
+            {isOpen && !disabled && (
+                <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-2 border-b bg-gray-50 flex items-center gap-2">
+                        <Search size={14} className="text-gray-400 ml-1" />
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search categories..."
+                            className="w-full px-2 py-1.5 bg-transparent border-none rounded-lg focus:ring-0 text-sm font-medium"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                    <div className="max-h-60 overflow-y-auto p-1">
+                        {filtered.length > 0 ? filtered.map(opt => {
+                            const isSelected = selected.includes(opt);
+                            const isLimitReached = !isSelected && selected.length >= max;
+                            return (
+                                <div
+                                    key={opt}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!isLimitReached) {
+                                            handleToggle(opt);
+                                        }
+                                    }}
+                                    className={`px-3 py-2 text-sm cursor-pointer rounded-lg transition-colors flex items-center justify-between mb-0.5 ${isSelected ? 'bg-blue-600 text-white font-bold' :
+                                            isLimitReached ? 'text-gray-300 cursor-not-allowed grayscale' : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-white border-white' : 'bg-white border-gray-300'}`}>
+                                            {isSelected && <Check size={12} className="text-blue-600" />}
+                                        </div>
+                                        {opt}
+                                    </span>
+                                    {isLimitReached && <span className="text-[10px] font-bold opacity-50 uppercase">Limit Reached</span>}
+                                </div>
+                            );
+                        }) : (
+                            <div className="px-4 py-6 text-sm text-gray-400 text-center italic">No matching categories</div>
                         )}
                     </div>
                 </div>
@@ -298,25 +435,19 @@ export default function ExtractionTools() {
                         </button>
                     </div>
 
-                    {/* Category Selection */}
+                    {/* Multi-Select Category Field */}
                     <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Categories (MAX 4)</label>
-                        <div className="flex flex-wrap gap-2">
-                            {TARGET_CATEGORIES.map(cat => {
-                                const active = cityCategories.includes(cat);
-                                const disabled = !active && cityCategories.length >= 4;
-                                return (
-                                    <button
-                                        key={cat}
-                                        onClick={() => toggleCategory(cityCategories, setCityCategories, cat)}
-                                        disabled={disabled || isExtractingCity}
-                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${active ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-500 hover:border-blue-400'} ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                    >
-                                        {cat}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <Filter size={12} /> 3. Service Category (MAX 4)
+                        </label>
+                        <SearchableMultiSelect
+                            options={ALL_CATEGORIES}
+                            selected={cityCategories}
+                            onToggle={(cat) => toggleCategory(cityCategories, setCityCategories, cat)}
+                            placeholder="Search & select up to 4 categories..."
+                            disabled={isExtractingCity}
+                            max={4}
+                        />
                     </div>
 
                     {/* Progress Bar */}
@@ -390,25 +521,19 @@ export default function ExtractionTools() {
                         </button>
                     </div>
 
-                    {/* Category Selection */}
+                    {/* Multi-Select Category Field */}
                     <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Categories (MAX 4)</label>
-                        <div className="flex flex-wrap gap-2">
-                            {TARGET_CATEGORIES.map(cat => {
-                                const active = clientCategories.includes(cat);
-                                const disabled = !active && clientCategories.length >= 4;
-                                return (
-                                    <button
-                                        key={cat}
-                                        onClick={() => toggleCategory(clientCategories, setClientCategories, cat)}
-                                        disabled={disabled || isExtractingClient}
-                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${active ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-gray-200 text-gray-500 hover:border-purple-400'} ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                    >
-                                        {cat}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <Filter size={12} /> 3. Service Category (MAX 4)
+                        </label>
+                        <SearchableMultiSelect
+                            options={ALL_CATEGORIES}
+                            selected={clientCategories}
+                            onToggle={(cat) => toggleCategory(clientCategories, setClientCategories, cat)}
+                            placeholder="Search & select up to 4 categories..."
+                            disabled={isExtractingClient}
+                            max={4}
+                        />
                     </div>
 
                     {/* Progress Bar */}
