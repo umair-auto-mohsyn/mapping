@@ -12,11 +12,18 @@ const MAX_CITY_RECORDS = 2000;
 const TARGET_CATEGORIES = [
     { name: "Hospital", query: "Hospital" },
     { name: "Pharmacy", query: "Pharmacy" },
-    { name: "Clinic", query: "Clinic" },
+    { name: "Clinic", query: "Medical Clinic" },
+    { name: "Clinic", query: "Health Clinic" },
+    { name: "Clinic", query: "Diagnostic Center" },
+    { name: "Hospital", query: "Medical Center" },
     { name: "Ambulance Service", query: "Ambulance Service" },
+    { name: "Ambulance Service", query: "Rescue 1122" },
     { name: "Laboratory", query: "Medical Laboratory" },
+    { name: "Laboratory", query: "Pathology Lab" },
+    { name: "Blood Bank", query: "Blood Bank" },
     { name: "Fire Station", query: "Fire Station" },
-    { name: "Police Station", query: "Police Station" }
+    { name: "Police Station", query: "Police Station" },
+    { name: "Emergency Service", query: "Emergency Service" }
 ];
 
 export async function POST(request: Request) {
