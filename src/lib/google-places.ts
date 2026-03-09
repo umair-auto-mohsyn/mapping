@@ -4,7 +4,7 @@ import { Service } from "@/types";
 // Enhanced configuration: Keyword-First strategy for high accuracy
 export const CATEGORY_SEARCH_CONFIG: Record<string, { types: string[], keyword?: string }> = {
     "AC Technition": { types: [], keyword: "AC Technician Repair" },
-    "Ambulance Service": { types: [], keyword: "Ambulance" }, // Removed 'hospital' type to avoid general hospitals
+    "Ambulance Service": { types: [], keyword: "Ambulance" },
     "Bakery": { types: ["bakery"], keyword: "Bakery" },
     "Car Repair": { types: ["car_repair"], keyword: "Car Repair workshop" },
     "Child day care": { types: [], keyword: "Day care preschool" },

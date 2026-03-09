@@ -4,20 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { getServicesFromSheets, saveMultipleServicesToSheets, checkExtractionCooldown, logExtraction } from "@/lib/google-sheets";
 import { Service } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+import { CATEGORY_SEARCH_CONFIG } from "@/lib/google-places";
 
 const GMAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAX_CLIENT_RECORDS = 400; // Strict cap for client-specific extraction
-
-// Essential categories exactly mapped for Text Search
-const TARGET_CATEGORIES = [
-    { name: "Hospital", query: "Hospital" },
-    { name: "Burn Emergency Hospital", query: "Burn Emergency Hospital" },
-    { name: "Pharmacy", query: "Pharmacy" },
-    { name: "Fire Station", query: "Fire Station" },
-    { name: "Police Station", query: "Police Station" },
-    { name: "Ambulance Service", query: "Ambulance Service" },
-    { name: "Medical Store", query: "Medical Store" }
-];
 
 export async function POST(request: Request) {
     try {
@@ -48,7 +38,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Maximum 4 categories allowed at a time" }, { status: 400 });
         }
 
-        const selectedCategories = TARGET_CATEGORIES.filter(cat => categories.includes(cat.name));
+        // Map selected names to their search config
+        const selectedCategories = categories
+            .filter(name => CATEGORY_SEARCH_CONFIG[name])
+            .map(name => ({
+                name,
+                query: CATEGORY_SEARCH_CONFIG[name].keyword || name
+            }));
+
         if (selectedCategories.length === 0) {
             return NextResponse.json({ error: "Invalid categories selected" }, { status: 400 });
         }

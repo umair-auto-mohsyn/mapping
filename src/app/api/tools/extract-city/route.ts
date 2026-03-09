@@ -4,20 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { getServicesFromSheets, saveMultipleServicesToSheets, checkExtractionCooldown, logExtraction } from "@/lib/google-sheets";
 import { Service } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+import { CATEGORY_SEARCH_CONFIG } from "@/lib/google-places";
 
 const GMAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAX_CITY_RECORDS = 2000;
-
-// Essential categories to extract
-const TARGET_CATEGORIES = [
-    { name: "Hospital", query: "Hospital" },
-    { name: "Burn Emergency Hospital", query: "Burn Emergency Hospital" },
-    { name: "Pharmacy", query: "Pharmacy" },
-    { name: "Fire Station", query: "Fire Station" },
-    { name: "Police Station", query: "Police Station" },
-    { name: "Ambulance Service", query: "Ambulance Service" },
-    { name: "Medical Store", query: "Medical Store" }
-];
 
 export async function POST(request: Request) {
     try {
@@ -47,7 +37,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Maximum 4 categories allowed at a time" }, { status: 400 });
         }
 
-        const selectedCategories = TARGET_CATEGORIES.filter(cat => categories.includes(cat.name));
+        // Map selected names to their search config
+        const selectedCategories = categories
+            .filter(name => CATEGORY_SEARCH_CONFIG[name])
+            .map(name => ({
+                name,
+                query: CATEGORY_SEARCH_CONFIG[name].keyword || name
+            }));
+
         if (selectedCategories.length === 0) {
             return NextResponse.json({ error: "Invalid categories selected" }, { status: 400 });
         }
@@ -74,11 +71,11 @@ export async function POST(request: Request) {
             let nextPageToken: string | undefined = undefined;
             let pageCount = 0;
 
-            while (totalExtracted < MAX_CITY_RECORDS && pageCount < 15) { // max 15 pages per category to prevent runaway loops (300 items max per cat)
+            while (totalExtracted < MAX_CITY_RECORDS && pageCount < 15) { // max 15 pages per category
                 const payload: any = {
                     textQuery: searchQuery,
                     languageCode: "en",
-                    maxResultCount: 20 // Max per page for Text Search
+                    maxResultCount: 20
                 };
 
                 if (nextPageToken) {
@@ -102,37 +99,30 @@ export async function POST(request: Request) {
                     for (const place of places) {
                         if (totalExtracted >= MAX_CITY_RECORDS) break;
 
-                        // Skip non-operational
                         if (place.businessStatus && place.businessStatus !== "OPERATIONAL") continue;
 
                         const placeId = place.id;
 
-                        // Deduplicate
                         if (existingIds.has(placeId)) {
                             skippedCount++;
                             continue;
                         }
 
-                        // **CRITICAL FIX**: Google sometimes returns results from nearby major cities 
-                        // if it runs out of results in the target city. We must enforce strict filtering.
-                        // We check if the address contains the target city name (case-insensitive).
                         const addressLower = (place.formattedAddress || "").toLowerCase();
                         const targetCityLower = city.toLowerCase();
 
-                        // Allow it if the city is in the address, OR if it's a very short address (rare, but possible)
                         if (!addressLower.includes(targetCityLower) && addressLower.length > 5) {
                             console.log(`[City Extract] Skipped ${place.displayName?.text} - Address (${place.formattedAddress}) doesn't match target city (${city})`);
-                            continue; // Skip because it's in the wrong city (e.g., Lahore instead of Gujranwala)
+                            continue;
                         }
 
-                        existingIds.add(placeId); // Prevent duplicates within this batched run
+                        existingIds.add(placeId);
 
-                        // Map to our internal structure
                         const service: Service = {
                             source_id: placeId || uuidv4(),
                             entity_name: place.displayName?.text || "Unknown",
                             category: cat.name,
-                            city: city, // Ensure uniform city name
+                            city: city,
                             address: place.formattedAddress || "",
                             latitude: place.location?.latitude || 0,
                             longitude: place.location?.longitude || 0,
@@ -147,31 +137,24 @@ export async function POST(request: Request) {
                         totalExtracted++;
                     }
 
-                    // Handle pagination
                     nextPageToken = data.nextPageToken;
                     pageCount++;
 
-                    if (!nextPageToken) {
-                        break; // No more pages for this category
-                    }
-
-                    // A wait is required by Google Places API when using nextPageToken
-                    // "If the page token is generated from a `searchText` request, you must wait a short period..."
+                    if (!nextPageToken) break;
                     await new Promise(resolve => setTimeout(resolve, 2000));
 
                 } catch (err: any) {
                     console.error(`[City Extract] Error fetching page ${pageCount} for ${cat.name}:`, err.message);
-                    break; // stop trying this category and move to the next
+                    break;
                 }
             }
         }
 
-        // 3. Save to Google Sheets in bulk
         if (newServices.length > 0) {
             await saveMultipleServicesToSheets(newServices);
         }
 
-        // 5. Log Extraction
+        // 5. Log Extraction - Lock the city for 30 days
         await logExtraction('CITY', city, categories);
 
         return NextResponse.json({
