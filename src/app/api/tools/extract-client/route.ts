@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getServicesFromSheets, saveMultipleServicesToSheets } from "@/lib/google-sheets";
+import { getServicesFromSheets, saveMultipleServicesToSheets, checkExtractionCooldown, logExtraction } from "@/lib/google-sheets";
 import { Service } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -14,7 +14,9 @@ const TARGET_CATEGORIES = [
     { name: "Burn Emergency Hospital", query: "Burn Emergency Hospital" },
     { name: "Pharmacy", query: "Pharmacy" },
     { name: "Fire Station", query: "Fire Station" },
-    { name: "Police Station", query: "Police Station" }
+    { name: "Police Station", query: "Police Station" },
+    { name: "Ambulance Service", query: "Ambulance Service" },
+    { name: "Medical Store", query: "Medical Store" }
 ];
 
 export async function POST(request: Request) {
@@ -24,16 +26,38 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { lat, lng, city } = await request.json();
+        const { lat, lng, city, clientId, categories } = await request.json();
         if (!lat || !lng) {
             return NextResponse.json({ error: "Latitude and Longitude required" }, { status: 400 });
+        }
+
+        // 1. Check Cooldown
+        const identifier = clientId || `${lat},${lng}`;
+        const cooldown = await checkExtractionCooldown(identifier);
+        if (cooldown.isLocked) {
+            return NextResponse.json({
+                error: `Client/Location is on cooldown. Available in ${cooldown.remainingDays} days (Last: ${cooldown.lastDate}).`
+            }, { status: 403 });
+        }
+
+        // 2. Validate categories
+        if (!categories || !Array.isArray(categories) || categories.length === 0) {
+            return NextResponse.json({ error: "At least one category required" }, { status: 400 });
+        }
+        if (categories.length > 4) {
+            return NextResponse.json({ error: "Maximum 4 categories allowed at a time" }, { status: 400 });
+        }
+
+        const selectedCategories = TARGET_CATEGORIES.filter(cat => categories.includes(cat.name));
+        if (selectedCategories.length === 0) {
+            return NextResponse.json({ error: "Invalid categories selected" }, { status: 400 });
         }
 
         if (!GMAPS_API_KEY) {
             return NextResponse.json({ error: "API Key missing" }, { status: 500 });
         }
 
-        // 1. Fetch existing for deduplication
+        // 3. Fetch existing for deduplication
         const existingServices = await getServicesFromSheets();
         const existingIds = new Set(existingServices.map((s: any) => s.source_id));
 
@@ -41,11 +65,8 @@ export async function POST(request: Request) {
         let skippedCount = 0;
         const newServices: Service[] = [];
 
-        // 2. Extract using New Places API (search Nearby alternative for precise location bias)
-        // The new `places:searchText` supports location bias which is actually better and cheaper 
-        // than proper `searchNearby` because we can search specific keywords and avoid returning garbage categories.
-
-        for (const cat of TARGET_CATEGORIES) {
+        // 4. Extract using New Places API
+        for (const cat of selectedCategories) {
             if (totalExtracted >= MAX_CLIENT_RECORDS) break;
 
             let nextPageToken: string | undefined = undefined;
@@ -58,10 +79,7 @@ export async function POST(request: Request) {
                     maxResultCount: 20,
                     locationBias: {
                         circle: {
-                            center: {
-                                latitude: lat,
-                                longitude: lng
-                            },
+                            center: { latitude: lat, longitude: lng },
                             radius: 5000.0 // 5km strict radius
                         }
                     }
@@ -121,11 +139,7 @@ export async function POST(request: Request) {
                     nextPageToken = data.nextPageToken;
                     pageCount++;
 
-                    if (!nextPageToken) {
-                        break;
-                    }
-
-                    // Google API requirement for text search pagination
+                    if (!nextPageToken) break;
                     await new Promise(resolve => setTimeout(resolve, 2000));
 
                 } catch (err: any) {
@@ -135,10 +149,13 @@ export async function POST(request: Request) {
             }
         }
 
-        // 3. Save to Google Sheets
+        // 5. Save to Google Sheets
         if (newServices.length > 0) {
             await saveMultipleServicesToSheets(newServices);
         }
+
+        // 6. Log Extraction
+        await logExtraction('CLIENT', identifier, categories);
 
         return NextResponse.json({
             savedCount: newServices.length,

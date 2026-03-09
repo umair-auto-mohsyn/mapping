@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getServicesFromSheets, saveMultipleServicesToSheets } from "@/lib/google-sheets";
+import { getServicesFromSheets, saveMultipleServicesToSheets, checkExtractionCooldown, logExtraction } from "@/lib/google-sheets";
 import { Service } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -14,7 +14,9 @@ const TARGET_CATEGORIES = [
     { name: "Burn Emergency Hospital", query: "Burn Emergency Hospital" },
     { name: "Pharmacy", query: "Pharmacy" },
     { name: "Fire Station", query: "Fire Station" },
-    { name: "Police Station", query: "Police Station" }
+    { name: "Police Station", query: "Police Station" },
+    { name: "Ambulance Service", query: "Ambulance Service" },
+    { name: "Medical Store", query: "Medical Store" }
 ];
 
 export async function POST(request: Request) {
@@ -24,9 +26,30 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { city } = await request.json();
+        const { city, categories } = await request.json();
         if (!city) {
             return NextResponse.json({ error: "City name required" }, { status: 400 });
+        }
+
+        // 1. Check Cooldown
+        const cooldown = await checkExtractionCooldown(city);
+        if (cooldown.isLocked) {
+            return NextResponse.json({
+                error: `City ${city} is on cooldown. Available in ${cooldown.remainingDays} days (Last: ${cooldown.lastDate}).`
+            }, { status: 403 });
+        }
+
+        // 2. Validate categories
+        if (!categories || !Array.isArray(categories) || categories.length === 0) {
+            return NextResponse.json({ error: "At least one category required" }, { status: 400 });
+        }
+        if (categories.length > 4) {
+            return NextResponse.json({ error: "Maximum 4 categories allowed at a time" }, { status: 400 });
+        }
+
+        const selectedCategories = TARGET_CATEGORIES.filter(cat => categories.includes(cat.name));
+        if (selectedCategories.length === 0) {
+            return NextResponse.json({ error: "Invalid categories selected" }, { status: 400 });
         }
 
         if (!GMAPS_API_KEY) {
@@ -41,8 +64,8 @@ export async function POST(request: Request) {
         let skippedCount = 0;
         const newServices: Service[] = [];
 
-        // 2. Extract per category using New Places API
-        for (const cat of TARGET_CATEGORIES) {
+        // 4. Extract per category using New Places API
+        for (const cat of selectedCategories) {
             if (totalExtracted >= MAX_CITY_RECORDS) break;
 
             const searchQuery = `${cat.query} in ${city}`;
@@ -147,6 +170,9 @@ export async function POST(request: Request) {
         if (newServices.length > 0) {
             await saveMultipleServicesToSheets(newServices);
         }
+
+        // 5. Log Extraction
+        await logExtraction('CITY', city, categories);
 
         return NextResponse.json({
             savedCount: newServices.length,

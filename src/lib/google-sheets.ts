@@ -392,3 +392,68 @@ export async function saveMultipleServicesToSheets(services: Service[]) {
 
     await appendGoogleSheetData("'Final Merged Sheet(Map Usage)'!A:L", rows);
 }
+
+/**
+ * EXTRACTION LOGGING & COOLDOWN
+ * Sheet: "Extraction Log"
+ * Columns: A (Timestamp), B (Type: CITY|CLIENT), C (Identifier: City Name|Client ID), D (Categories)
+ */
+
+export async function getExtractionLog(): Promise<any[][]> {
+    try {
+        // Try to fetch from the primary sheet where results are stored
+        return await getGoogleSheetData("'Extraction Log'!A2:D");
+    } catch (e: any) {
+        console.warn("Extraction Log sheet not found or empty:", e.message);
+        return [];
+    }
+}
+
+export async function checkExtractionCooldown(identifier: string): Promise<{ isLocked: boolean; remainingDays?: number; lastDate?: string }> {
+    const logs = await getExtractionLog();
+    if (logs.length === 0) return { isLocked: false };
+
+    // Find the latest entry for this identifier
+    const relevantLogs = logs.filter(row => (row[2] || "").trim().toLowerCase() === identifier.toLowerCase());
+    if (relevantLogs.length === 0) return { isLocked: false };
+
+    // Sort by timestamp (Column A is ISO string)
+    relevantLogs.sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
+    const latest = relevantLogs[0];
+    const lastDate = new Date(latest[0]);
+    const now = new Date();
+
+    const diffTime = Math.abs(now.getTime() - lastDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 30) {
+        return {
+            isLocked: true,
+            remainingDays: 30 - diffDays,
+            lastDate: lastDate.toLocaleDateString()
+        };
+    }
+
+    return { isLocked: false };
+}
+
+export async function logExtraction(type: 'CITY' | 'CLIENT', identifier: string, categories: string[]) {
+    const auth = getAuth();
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const timestamp = new Date().toISOString();
+    const row = [timestamp, type, identifier, categories.join(", ")];
+
+    try {
+        await sheets.spreadsheets.values.append({
+            spreadsheetId: SHEET_ID,
+            range: "'Extraction Log'!A:D",
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: [row] }
+        });
+        console.log(`[Log] Extraction recorded for ${identifier} (${type})`);
+    } catch (e: any) {
+        console.error("Failed to log extraction:", e.message);
+        // If sheet doesn't exist, we might need to create it, but for now we just fail gracefully
+    }
+}
