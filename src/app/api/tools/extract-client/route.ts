@@ -11,9 +11,10 @@ const MAX_CLIENT_RECORDS = 400; // Strict cap for client-specific extraction
 // Essential categories exactly mapped for Text Search
 const TARGET_CATEGORIES = [
     { name: "Hospital", query: "Hospital" },
+    { name: "Burn Emergency Hospital", query: "Burn Emergency Hospital" },
     { name: "Pharmacy", query: "Pharmacy" },
-    { name: "Clinic", query: "Clinic" },
-    { name: "Ambulance Service", query: "Ambulance Service" },
+    { name: "Fire Station", query: "Fire Station" },
+    { name: "Police Station", query: "Police Station" }
 ];
 
 export async function POST(request: Request) {

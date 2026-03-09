@@ -177,7 +177,7 @@ export default function ExtractionTools() {
                     </div>
                     <div>
                         <h2 className="text-lg font-black text-gray-900">City-Wide Extraction</h2>
-                        <p className="text-sm text-gray-500">Extract up to 2,000 services for a specific city. Skips existing data.</p>
+                        <p className="text-sm text-gray-500">Extract essential services for a specific city. Skips existing data.</p>
                     </div>
                 </div>
 
@@ -244,7 +244,7 @@ export default function ExtractionTools() {
                     </div>
                     <div>
                         <h2 className="text-lg font-black text-gray-900">Client-Specific Extraction</h2>
-                        <p className="text-sm text-gray-500">Discover essential services (Hospitals, Pharmacies, etc.) limited to a 5-10km radius around a specific client. Capped at 400.</p>
+                        <p className="text-sm text-gray-500">Discover essential services (Hospitals, Pharmacies, etc.) limited to a 5-10km radius around a specific client.</p>
                     </div>
                 </div>
 
