@@ -10,7 +10,7 @@ export const metadata = {
 export default async function ToolsPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !["ADMIN", "EDITOR"].includes(session.user.role)) {
+    if (!session || !session.user || !session.user.role || !["ADMIN", "EDITOR"].includes(session.user.role)) {
         redirect("/");
     }
 
