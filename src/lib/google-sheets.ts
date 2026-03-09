@@ -367,3 +367,28 @@ export async function saveClientToSheets(client: Client) {
     ];
     await appendGoogleSheetData("'Client Coordinates Update'!A:F", [row]);
 }
+
+/**
+ * Optimized bulk insert for the Extraction Tools.
+ * Bypasses row-by-row checks and just appends the whole batch in one API call.
+ */
+export async function saveMultipleServicesToSheets(services: Service[]) {
+    if (!services || services.length === 0) return;
+
+    const rows = services.map(service => [
+        service.source_id,
+        service.entity_name,
+        service.category,
+        service.city,
+        service.address,
+        service.latitude,
+        service.longitude,
+        service.primary_contact,
+        service.secondary_contact,
+        service.opening_hours,
+        service.image_url,
+        service.data_source
+    ]);
+
+    await appendGoogleSheetData("'Final Merged Sheet(Map Usage)'!A:L", rows);
+}

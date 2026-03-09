@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { getAuthorizedUsers } from "@/lib/google-sheets";
 
-const handler = NextAuth({
+export const authOptions: import("next-auth").NextAuthOptions = {
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -36,7 +36,7 @@ const handler = NextAuth({
             }
             return token;
         },
-        async session({ session, token }) {
+        async session({ session, token }: { session: any, token: any }) {
             // Pass the role from the token to the client session
             if (session.user) {
                 session.user.role = token.role;
@@ -44,7 +44,8 @@ const handler = NextAuth({
             return session;
         }
     },
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
-

@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import { useSession, signOut } from "next-auth/react";
 import { Client, Service } from "@/types";
 import { calculateDistance } from "@/lib/utils";
-import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck, LogOut } from "lucide-react";
+import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck, LogOut, Wrench } from "lucide-react";
+import Link from "next/link";
 
 // CATEGORY_COLORS for reference in select
 const CATEGORY_COLORS: Record<string, string> = {
@@ -437,6 +438,14 @@ export default function Home() {
                 {/* Floating Admin Buttons - Only visible to ADMINs and EDITORs */}
                 {session?.user?.role && ['ADMIN', 'EDITOR'].includes(session.user.role) && (
                     <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-3">
+                        <Link
+                            href="/tools"
+                            className="bg-purple-600 p-3 rounded-2xl shadow-xl hover:bg-purple-700 text-white transition-all border-2 border-purple-500 group relative flex items-center justify-center"
+                            title="Extraction Tools"
+                        >
+                            <Wrench size={20} strokeWidth={4} />
+                            <span className="absolute right-full mr-3 bg-gray-900 text-white text-[10px] font-black py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-lg">Extraction Tools</span>
+                        </Link>
                         <button
                             onClick={() => setIsAdminOpen(true)}
                             className="bg-blue-600 p-3 rounded-2xl shadow-xl hover:bg-blue-700 text-white transition-all border-2 border-blue-500 group relative flex items-center justify-center"
