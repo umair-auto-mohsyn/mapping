@@ -25,14 +25,14 @@ export async function POST(request: Request) {
 
         // 1. Check Granular Cooldowns
         const locked = await getLockedCategories(city);
-        const lockedNames = new Set(locked.map(l => l.category));
+        const lockedNames = new Set(locked.map(l => l.category.toLowerCase()));
 
         // Validate categories
         if (!categories || !Array.isArray(categories) || categories.length === 0) {
             return NextResponse.json({ error: "At least one category required" }, { status: 400 });
         }
 
-        const requestedLocked = categories.filter(c => lockedNames.has(c));
+        const requestedLocked = categories.filter(c => lockedNames.has(c.toLowerCase()));
         if (requestedLocked.length > 0) {
             return NextResponse.json({
                 error: `Categories on cooldown: ${requestedLocked.join(", ")}. Please wait 30 days.`

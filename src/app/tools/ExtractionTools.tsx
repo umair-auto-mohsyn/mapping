@@ -208,7 +208,7 @@ function SearchableMultiSelect({
                     <div className="max-h-96 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200">
                         {filtered.length > 0 ? filtered.map(opt => {
                             const isSelected = selected.includes(opt);
-                            const lock = lockedOptions.find(l => l.category === opt);
+                            const lock = lockedOptions.find(l => l.category.toLowerCase() === opt.toLowerCase());
                             const isLimitReached = !isSelected && selected.length >= max;
                             const isLocked = !!lock;
 
@@ -290,7 +290,8 @@ export default function ExtractionTools() {
             setCityLockedCats([]);
             return;
         }
-        fetch(`/api/tools/cooldown?target=${encodeURIComponent(cityInput)}`)
+        const t = new Date().getTime();
+        fetch(`/api/tools/cooldown?target=${encodeURIComponent(cityInput)}&t=${t}`)
             .then(res => res.json())
             .then(data => setCityLockedCats(data.lockedCategories || []))
             .catch(err => console.error("Error fetching city cooldowns:", err));
@@ -304,7 +305,8 @@ export default function ExtractionTools() {
         }
         const client = clients.find(c => `${c.firstName} ${c.lastName} (${c.city})` === selectedClientStr);
         const identifier = client?.id || selectedClientStr;
-        fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}`)
+        const t = new Date().getTime();
+        fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}&t=${t}`)
             .then(res => res.json())
             .then(data => setClientLockedCats(data.lockedCategories || []))
             .catch(err => console.error("Error fetching client cooldowns:", err));
@@ -429,8 +431,9 @@ export default function ExtractionTools() {
                         count: data.savedCount
                     });
                     // Refresh cooldowns
+                    const t = new Date().getTime();
                     const identifier = client?.id || selectedClientStr;
-                    fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}`)
+                    fetch(`/api/tools/cooldown?target=${encodeURIComponent(identifier)}&t=${t}`)
                         .then(res => res.json())
                         .then(d => setClientLockedCats(d.lockedCategories || []));
                 }
