@@ -47,65 +47,90 @@ export async function POST(request: Request) {
         for (const cat of TARGET_CATEGORIES) {
             if (totalExtracted >= MAX_CLIENT_RECORDS) break;
 
-            const payload = {
-                textQuery: cat.query,
-                languageCode: "en",
-                maxResultCount: 20,
-                locationBias: {
-                    circle: {
-                        center: {
-                            latitude: lat,
-                            longitude: lng
-                        },
-                        radius: 5000.0 // 5km strict radius
+            let nextPageToken: string | undefined = undefined;
+            let pageCount = 0;
+
+            while (totalExtracted < MAX_CLIENT_RECORDS && pageCount < 10) { // max 10 pages per cat
+                const payload: any = {
+                    textQuery: cat.query,
+                    languageCode: "en",
+                    maxResultCount: 20,
+                    locationBias: {
+                        circle: {
+                            center: {
+                                latitude: lat,
+                                longitude: lng
+                            },
+                            radius: 5000.0 // 5km strict radius
+                        }
                     }
-                }
-            };
-
-            const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Goog-Api-Key": GMAPS_API_KEY,
-                    "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.nationalPhoneNumber,places.regularOpeningHours,places.businessStatus",
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-            const places = data.places || [];
-
-            for (const place of places) {
-                if (totalExtracted >= MAX_CLIENT_RECORDS) break;
-
-                if (place.businessStatus && place.businessStatus !== "OPERATIONAL") continue;
-
-                const placeId = place.id;
-
-                if (existingIds.has(placeId)) {
-                    skippedCount++;
-                    continue;
-                }
-
-                existingIds.add(placeId);
-
-                const service: Service = {
-                    source_id: placeId || uuidv4(),
-                    entity_name: place.displayName?.text || "Unknown",
-                    category: cat.name,
-                    city: city || "Unknown",
-                    address: place.formattedAddress || "",
-                    latitude: place.location?.latitude || 0,
-                    longitude: place.location?.longitude || 0,
-                    primary_contact: place.nationalPhoneNumber || "",
-                    secondary_contact: "",
-                    opening_hours: place.regularOpeningHours?.weekdayDescriptions?.join(" | ") || "",
-                    image_url: "",
-                    data_source: "Google Maps"
                 };
 
-                newServices.push(service);
-                totalExtracted++;
+                if (nextPageToken) {
+                    payload.pageToken = nextPageToken;
+                }
+
+                try {
+                    const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Goog-Api-Key": GMAPS_API_KEY,
+                            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.nationalPhoneNumber,places.regularOpeningHours,places.businessStatus,nextPageToken",
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    const places = data.places || [];
+
+                    for (const place of places) {
+                        if (totalExtracted >= MAX_CLIENT_RECORDS) break;
+
+                        if (place.businessStatus && place.businessStatus !== "OPERATIONAL") continue;
+
+                        const placeId = place.id;
+
+                        if (existingIds.has(placeId)) {
+                            skippedCount++;
+                            continue;
+                        }
+
+                        existingIds.add(placeId);
+
+                        const service: Service = {
+                            source_id: placeId || uuidv4(),
+                            entity_name: place.displayName?.text || "Unknown",
+                            category: cat.name,
+                            city: city || "Unknown",
+                            address: place.formattedAddress || "",
+                            latitude: place.location?.latitude || 0,
+                            longitude: place.location?.longitude || 0,
+                            primary_contact: place.nationalPhoneNumber || "",
+                            secondary_contact: "",
+                            opening_hours: place.regularOpeningHours?.weekdayDescriptions?.join(" | ") || "",
+                            image_url: "",
+                            data_source: "Google Maps"
+                        };
+
+                        newServices.push(service);
+                        totalExtracted++;
+                    }
+
+                    nextPageToken = data.nextPageToken;
+                    pageCount++;
+
+                    if (!nextPageToken) {
+                        break;
+                    }
+
+                    // Google API requirement for text search pagination
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                } catch (err: any) {
+                    console.error(`[Client Extract] Error fetching page ${pageCount} for ${cat.name}:`, err.message);
+                    break;
+                }
             }
         }
 
