@@ -82,7 +82,7 @@ export async function GET() {
         finalUnenriched.sort((a, b) => {
             if (a.isNewCity && !b.isNewCity) return -1;
             if (!a.isNewCity && b.isNewCity) return 1;
-            return b.missingCount - a.missingCount;
+            return a.missingCount - b.missingCount;
         });
 
         return NextResponse.json({
