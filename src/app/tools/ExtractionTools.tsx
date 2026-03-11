@@ -564,7 +564,7 @@ export default function ExtractionTools() {
         <div className="p-6 md:p-10 space-y-12 max-w-5xl mx-auto">
 
             {/* --- Section 0: Coverage Optimizer --- */}
-            {(!isLoadingCoverage || unenrichedClients.length >= 0) && (
+            {(!isAnalyzing || unenrichedClients.length >= 0) && (
                 <div className="relative overflow-hidden bg-white rounded-[2.5rem] p-1 border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all">
                     {/* Decorative Background Blur */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-amber-100/30 blur-[100px] -mr-32 -mt-16 rounded-full" />
@@ -653,7 +653,7 @@ export default function ExtractionTools() {
                                                     const lockedSet = new Set((unenrichedClients[0] as any).lockedCategories?.map((c: string) => c.toLowerCase()) || []);
                                                     const searchable = unenrichedClients[0].missingCategories.filter((cat: string) => !lockedSet.has(cat.toLowerCase()));
                                                     if (searchable.length === 0) return <span>On Cooldown</span>;
-                                                    return <span>Start Phase {Math.ceil((28 - searchable.length) / 5) + 1}</span>;
+                                                    return <span>Start Phase {Math.ceil((ALL_CATEGORIES.length - searchable.length) / 5) + 1}</span>;
                                                 })()}
                                                 <ArrowRight size={20} />
                                             </div>
