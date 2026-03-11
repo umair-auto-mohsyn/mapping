@@ -585,7 +585,7 @@ export default function ExtractionTools() {
                         <button
                             onClick={handleBatchEnrichment}
                             disabled={isExtractingClient}
-                            className="bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-3"
+                            className="bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-3 shrink-0"
                         >
                             {isExtractingClient ? (
                                 <><Loader2 size={18} className="animate-spin" /> Processing...</>
@@ -594,7 +594,35 @@ export default function ExtractionTools() {
                             )}
                         </button>
                     </div>
-                    <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest text-center italic">Strong deduplication enforced: only new unique records will be saved.</p>
+
+                    {/* Pending Queue List */}
+                    <div className="space-y-3">
+                        <h3 className="text-[10px] font-black text-amber-700 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                            <Loader2 size={10} className={isAnalyzing ? "animate-spin" : ""} /> Pending Enrichment Queue ({unenrichedClients.length})
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {unenrichedClients.map((item, idx) => (
+                                <div
+                                    key={item.id}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${idx === 0 ? 'bg-amber-100/50 border-amber-300 shadow-sm' : 'bg-white/30 border-amber-100 hover:bg-white/50'
+                                        }`}
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-[10px] font-black text-amber-900 shrink-0">
+                                        {28 - item.missingCount}/28
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-black text-amber-900 truncate uppercase tracking-tight">{item.client.firstName} {item.client.lastName}</p>
+                                        <p className="text-[9px] text-amber-700 font-bold truncate uppercase">{item.client.city}</p>
+                                    </div>
+                                    {idx === 0 && (
+                                        <span className="text-[8px] font-black bg-amber-600 text-white px-1.5 py-0.5 rounded uppercase leading-none">Next</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest text-center italic border-t border-amber-200/50 pt-4">Strong deduplication enforced: only new unique records will be saved.</p>
                 </div>
             )}
 
