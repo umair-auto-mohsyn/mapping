@@ -18,13 +18,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { lat, lng, city, clientId, categories, radius } = await request.json();
+        const { lat, lng, city, clientId, categories } = await request.json();
         if (!lat || !lng) {
             return NextResponse.json({ error: "Latitude and Longitude required" }, { status: 400 });
         }
 
-        // Search radius in meters (default 10km)
-        const searchRadius = radius || 10000.0;
+        // Search radius in meters (Fixed to 10km as per requirement)
+        const searchRadius = 10000.0;
 
         // 1. Check Granular Cooldowns
         const identifier = clientId || `${lat},${lng}`;

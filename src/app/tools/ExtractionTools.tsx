@@ -270,7 +270,6 @@ export default function ExtractionTools() {
     const [clientLockedCats, setClientLockedCats] = useState<{ category: string, lockedUntil: string }[]>([]);
     const [isExtractingClient, setIsExtractingClient] = useState(false);
     const [clientProgress, setClientProgress] = useState(0);
-    const [clientRadius, setClientRadius] = useState(10); // 5, 10, 20 km
     const [clientResult, setClientResult] = useState<{ status: 'success' | 'error' | 'warning', message: string, count?: number } | null>(null);
 
     useEffect(() => {
@@ -352,8 +351,7 @@ export default function ExtractionTools() {
                     lng: client.longitude,
                     city: client.city,
                     clientId: client.id,
-                    categories: clientCategories,
-                    radius: clientRadius * 1000 // Convert km to meters
+                    categories: clientCategories
                 }),
             });
 
@@ -371,7 +369,7 @@ export default function ExtractionTools() {
                         message: data.savedCount > 0
                             ? `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped. 30-day cooldown started.`
                             : (data.emptyCategories?.length > 0 
-                                ? `No data found for ${data.emptyCategories.join(", ")} within ${clientRadius}km of this client.`
+                                ? `No data found for ${data.emptyCategories.join(", ")} within 10km of this client.`
                                 : `Checked ${clientCategories.join(", ")}, but no new unique services found.`),
                         count: data.savedCount
                     });
@@ -404,27 +402,9 @@ export default function ExtractionTools() {
                     <div className="bg-purple-100 p-3 rounded-2xl text-purple-600">
                         <Database size={24} />
                     </div>
-                    <div className="flex-1">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Client-Specific Extraction</h2>
-                                <p className="text-sm text-gray-500">Discover essential services within a targeted radius of a specific client location.</p>
-                            </div>
-                            <div className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-2xl border border-gray-100">
-                                {[5, 10, 20].map(r => (
-                                    <button
-                                        key={r}
-                                        onClick={() => setClientRadius(r)}
-                                        className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${clientRadius === r
-                                                ? 'bg-purple-600 text-white shadow-md'
-                                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                                            }`}
-                                    >
-                                        {r}KM
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                    <div>
+                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Client-Specific Extraction</h2>
+                        <p className="text-sm text-gray-500">Discover essential services within a 10km radius of a specific client location.</p>
                     </div>
                 </div>
 
