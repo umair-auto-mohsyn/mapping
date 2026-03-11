@@ -564,7 +564,7 @@ export default function ExtractionTools() {
         <div className="p-6 md:p-10 space-y-12 max-w-5xl mx-auto">
 
             {/* --- Section 0: Coverage Optimizer --- */}
-            {unenrichedClients.length > 0 && (
+            {(!isLoadingCoverage || unenrichedClients.length >= 0) && (
                 <div className="relative overflow-hidden bg-white rounded-[2.5rem] p-1 border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all">
                     {/* Decorative Background Blur */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-amber-100/30 blur-[100px] -mr-32 -mt-16 rounded-full" />
@@ -580,18 +580,20 @@ export default function ExtractionTools() {
                                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                     <div>
                                         <h2 className="text-2xl font-black text-gray-900 tracking-tight">Coverage Manager</h2>
-                                        <p className="text-sm text-gray-400 font-medium mt-1">Automatic detection identified clients missing regional service data.</p>
+                                        <p className="text-sm text-gray-400 font-medium mt-1">Automatic detection identifies clients missing regional service data.</p>
                                     </div>
                                     <div className="px-5 py-2.5 bg-amber-50 rounded-2xl border border-amber-100 flex items-center gap-3">
                                         <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">{unenrichedClients.length} Blind Spots</span>
+                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">{unenrichedClients.length} Pending Actions</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Hero Action Card (Next Suggested) */}
-                        <div className="relative group overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 rounded-[2rem] p-1 shadow-2xl">
+                        {unenrichedClients.length > 0 ? (
+                            <>
+                                {/* Hero Action Card (Next Suggested) */}
+                                <div className="relative group overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 rounded-[2rem] p-1 shadow-2xl">
                             <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
 
                             <div className="relative bg-white/5 backdrop-blur-sm rounded-[1.9rem] p-8 flex flex-col lg:flex-row items-center justify-between gap-8 border border-white/10">
@@ -606,13 +608,13 @@ export default function ExtractionTools() {
                                                 className="stroke-amber-400 fill-none transition-all duration-1000"
                                                 strokeWidth="6"
                                                 strokeDasharray={264}
-                                                strokeDashoffset={264 - (264 * (28 - (unenrichedClients[0] as any).unattemptedCount) / 28)}
+                                                strokeDashoffset={264 - (264 * (ALL_CATEGORIES.length - (unenrichedClients[0] as any).unattemptedCount) / ALL_CATEGORIES.length)}
                                                 strokeLinecap="round"
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-2xl font-black leading-none">{28 - (unenrichedClients[0] as any).unattemptedCount}</span>
-                                            <span className="text-[10px] font-bold opacity-40 uppercase tracking-tighter">/ 28</span>
+                                            <span className="text-2xl font-black leading-none">{ALL_CATEGORIES.length - (unenrichedClients[0] as any).unattemptedCount}</span>
+                                            <span className="text-[10px] font-bold opacity-40 uppercase tracking-tighter">/ {ALL_CATEGORIES.length}</span>
                                         </div>
                                     </div>
 
@@ -627,7 +629,7 @@ export default function ExtractionTools() {
                                         <div className="flex flex-wrap items-center gap-4 text-sm font-medium opacity-60">
                                             <span className="flex items-center gap-1.5 font-bold text-amber-500/80"><MapPin size={14} /> {unenrichedClients[0].client.city}</span>
                                             <span className="w-1 h-1 bg-white/20 rounded-full" />
-                                            <span>{28 - (unenrichedClients[0] as any).unattemptedCount} Processed </span>
+                                            <span>{ALL_CATEGORIES.length - (unenrichedClients[0] as any).unattemptedCount} Processed </span>
                                             <span className="w-1 h-1 bg-white/20 rounded-full" />
                                             <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded border border-white/10">GPS: {unenrichedClients[0].client.latitude.toFixed(4)}, {unenrichedClients[0].client.longitude.toFixed(4)}</span>
                                         </div>
@@ -720,8 +722,8 @@ export default function ExtractionTools() {
 
                                         <div className={`w-12 h-12 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-colors ${idx === 0 ? 'bg-amber-400 border-amber-500 text-white' : 'bg-gray-50 border-gray-100 text-gray-900 group-hover:bg-amber-50'
                                             }`}>
-                                            <span className="text-[14px] font-black leading-none">{28 - (item as any).unattemptedCount}</span>
-                                            <span className={`text-[8px] font-bold uppercase opacity-60 ${idx === 0 ? 'text-white' : 'text-gray-400'}`}>/ 28</span>
+                                            <span className="text-[14px] font-black leading-none">{ALL_CATEGORIES.length - (item as any).unattemptedCount}</span>
+                                            <span className={`text-[8px] font-bold uppercase opacity-60 ${idx === 0 ? 'text-white' : 'text-gray-400'}`}>/ {ALL_CATEGORIES.length}</span>
                                         </div>
 
                                         <div className="flex-1 min-w-0">
@@ -748,6 +750,19 @@ export default function ExtractionTools() {
                                 ))}
                             </div>
                         </div>
+
+                            </>
+                        ) : (
+                            <div className="bg-green-50/50 rounded-[2rem] p-12 flex flex-col items-center text-center space-y-4 border border-green-100/50">
+                                <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white shadow-xl shadow-green-200">
+                                    <CheckCircle2 size={40} />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-black text-green-900 tracking-tight">Queue Cleared!</h3>
+                                    <p className="text-gray-500 font-medium max-w-sm">Highly optimized. All regional service gaps have been searched and resolved.</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Footer Disclaimer */}
                         <div className="pt-6 border-t border-gray-50 flex flex-col md:flex-row items-center justify-between gap-4">
