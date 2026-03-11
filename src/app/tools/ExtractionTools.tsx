@@ -490,14 +490,28 @@ export default function ExtractionTools() {
     };
 
     const handleBatchEnrichment = async () => {
-        if (unenrichedClients.length === 0) return;
+        if (unenrichedClients.length === 0 || isExtractingClient) return;
 
         const target = unenrichedClients[0];
-        const categoriesToExtract = target.missingCategories.slice(0, 5);
+        setClientResult(null);
+
+        // Filter out categories that are currently on cooldown
+        const lockedSet = new Set((target as any).lockedCategories?.map((c: string) => c.toLowerCase()) || []);
+        const searchableCategories = target.missingCategories.filter((cat: string) => !lockedSet.has(cat.toLowerCase()));
+
+        if (searchableCategories.length === 0) {
+            setClientResult({
+                status: 'warning',
+                message: `All remaining missing categories for ${target.client.firstName} are currently on a 30-day cooldown. Please try again later or select a different client.`
+            });
+            return;
+        }
+
+        // Take the first 5 searchable categories
+        const batch = searchableCategories.slice(0, 5);
 
         setIsExtractingClient(true);
-        setClientResult(null);
-        setClientProgress(5);
+        setClientProgress(0);
 
         try {
             const response = await fetch("/api/tools/extract-client", {
@@ -508,26 +522,27 @@ export default function ExtractionTools() {
                     lng: target.client.longitude,
                     city: target.client.city,
                     clientId: target.client.id,
-                    categories: categoriesToExtract
+                    categories: batch
                 }),
             });
 
             const data = await response.json();
-            setClientProgress(100);
 
-            setTimeout(async () => {
-                if (!response.ok) {
-                    setClientResult({ status: 'error', message: data.error || "Batch failed" });
-                } else {
-                    setClientResult({
-                        status: 'success',
-                        message: `Successfully enriched ${target.client.firstName} with 5 categories (${categoriesToExtract.join(", ")}). Please click again for the next batch.`
-                    });
-                    // Refresh coverage to update the list
-                    await fetchCoverage();
-                }
+            if (!response.ok) {
+                setClientResult({ status: 'error', message: data.error || "Batch extraction failed" });
                 setIsExtractingClient(false);
-            }, 500);
+                return;
+            }
+
+            setClientResult({
+                status: data.savedCount > 0 ? 'success' : 'warning',
+                message: data.savedCount > 0
+                    ? `Successfully enriched ${target.client.firstName} with ${data.savedCount} new service(s) across ${batch.join(", ")}.`
+                    : `Checked ${batch.join(", ")}, but no new unique services were found in this area.`
+            });
+            // Refresh coverage to update the list
+            await fetchCoverage();
+            setIsExtractingClient(false);
 
         } catch (error: any) {
             setClientProgress(100);
@@ -620,7 +635,7 @@ export default function ExtractionTools() {
                                     <button
                                         onClick={handleBatchEnrichment}
                                         disabled={isExtractingClient}
-                                        className="relative w-full lg:w-auto px-10 py-5 bg-amber-400 hover:bg-amber-300 disabled:bg-gray-700 disabled:text-gray-500 text-gray-900 font-black uppercase tracking-widest rounded-2xl transition-all shadow-[0_15px_30px_rgba(251,191,36,0.2)] active:translate-y-1 block h-[64px]"
+                                        className="relative w-full lg:w-auto px-10 py-5 bg-amber-400 hover:bg-amber-300 disabled:bg-gray-700 disabled:text-gray-500 text-gray-900 font-black uppercase tracking-widest rounded-2xl transition-all shadow-[0_15px_30_rgba(251,191,36,0.2)] active:translate-y-1 block h-[64px]"
                                     >
                                         {isExtractingClient ? (
                                             <div className="flex items-center justify-center gap-3">
@@ -629,12 +644,24 @@ export default function ExtractionTools() {
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-center gap-3">
-                                                <span>Start Phase {Math.ceil((28 - unenrichedClients[0].missingCount) / 5) + 1}</span>
+                                                {(() => {
+                                                    const lockedSet = new Set((unenrichedClients[0] as any).lockedCategories?.map((c: string) => c.toLowerCase()) || []);
+                                                    const searchable = unenrichedClients[0].missingCategories.filter((cat: string) => !lockedSet.has(cat.toLowerCase()));
+                                                    if (searchable.length === 0) return <span>On Cooldown</span>;
+                                                    return <span>Start Phase {Math.ceil((28 - searchable.length) / 5) + 1}</span>;
+                                                })()}
                                                 <ArrowRight size={20} />
                                             </div>
                                         )}
                                     </button>
-                                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em]">Enriching 5 unique categories per batch</p>
+                                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em]">
+                                        {(() => {
+                                            const lockedSet = new Set((unenrichedClients[0] as any).lockedCategories?.map((c: string) => c.toLowerCase()) || []);
+                                            const searchable = unenrichedClients[0].missingCategories.filter((cat: string) => !lockedSet.has(cat.toLowerCase()));
+                                            if (searchable.length === 0) return "Remaining categories locked for 30 days";
+                                            return `Searchable: ${searchable.length} / Total Missing: ${unenrichedClients[0].missingCount}`;
+                                        })()}
+                                    </p>
                                 </div>
                             </div>
 

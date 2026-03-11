@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getClientsFromSheets, getServicesFromSheets } from "@/lib/google-sheets";
+import { getClientsFromSheets, getServicesFromSheets, getLockedCategories } from "@/lib/google-sheets";
 import { calculateDistance } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -33,25 +33,38 @@ export async function GET() {
             const coveredCategories = new Set(nearbyServices.map(s => s.category));
             const missingCategories = STANDARD_CATEGORIES.filter(cat => !coveredCategories.has(cat));
 
+            const identifier = `${client.firstName} ${client.lastName} (${client.city})`; // Match extraction identifier
             return {
-                id: `${client.firstName}-${client.lastName}-${client.city}`, // Unique-ish key
+                id: `${client.firstName}-${client.lastName}-${client.city}`,
                 client,
                 missingCount: missingCategories.length,
                 missingCategories: missingCategories,
-                isNewCity: !services.some(s => s.city.toLowerCase() === client.city.toLowerCase())
+                isNewCity: !services.some(s => s.city.toLowerCase() === client.city.toLowerCase()),
+                identifier // Pass the identifier for lock checking
             };
-        }).filter(item => item.missingCount > 0);
+        });
+
+        // 2. Resolve Locks (Parallel for efficiency)
+        const enrichedWithLocks = await Promise.all(unenrichedClients.map(async (item) => {
+            const locked = await getLockedCategories(item.identifier);
+            return {
+                ...item,
+                lockedCategories: locked.map(l => l.category)
+            };
+        }));
+
+        const finalUnenriched = enrichedWithLocks.filter(item => item.missingCount > 0);
 
         // Sort by clients with most missing data first, prioritize new cities
-        unenrichedClients.sort((a, b) => {
+        finalUnenriched.sort((a, b) => {
             if (a.isNewCity && !b.isNewCity) return -1;
             if (!a.isNewCity && b.isNewCity) return 1;
             return b.missingCount - a.missingCount;
         });
 
         return NextResponse.json({
-            unenrichedClients,
-            totalGaps: unenrichedClients.length
+            unenrichedClients: finalUnenriched,
+            totalGaps: finalUnenriched.length
         });
     } catch (error) {
         console.error("Analyze coverage error:", error);
