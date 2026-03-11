@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Loader2, Database, MapPin, CheckCircle2, AlertTriangle, ArrowRight, Search, X, Check, ChevronDown, Filter, RotateCcw } from "lucide-react";
+import { Loader2, Database, MapPin, CheckCircle2, AlertTriangle, ArrowRight, Search, X, Check, ChevronDown, Filter, RotateCcw, XCircle, FileText, ChevronRight } from "lucide-react";
 
 const PAKISTAN_CITIES = [
     "Abbottabad", "Ahmedpur East", "Arif Wala", "Attock", "Badin", "Bahawalnagar",
@@ -641,13 +641,13 @@ export default function ExtractionTools() {
                             {/* Batch Result Message */}
                             {clientResult && !isExtractingClient && (
                                 <div className={`p-6 rounded-[1.5rem] border animate-in slide-in-from-top-4 duration-300 ${clientResult.status === 'success' ? 'bg-green-50/50 border-green-200 text-green-900' :
-                                        clientResult.status === 'warning' ? 'bg-amber-50/50 border-amber-200 text-amber-900' :
-                                            'bg-red-50/50 border-red-200 text-red-900'
+                                    clientResult.status === 'warning' ? 'bg-amber-50/50 border-amber-200 text-amber-900' :
+                                        'bg-red-50/50 border-red-200 text-red-900'
                                     }`}>
                                     <div className="flex items-start gap-4">
                                         <div className={`mt-0.5 ${clientResult.status === 'success' ? 'text-green-600' :
-                                                clientResult.status === 'warning' ? 'text-amber-600' :
-                                                    'text-red-600'
+                                            clientResult.status === 'warning' ? 'text-amber-600' :
+                                                'text-red-600'
                                             }`}>
                                             {clientResult.status === 'success' ? <CheckCircle2 size={20} /> :
                                                 clientResult.status === 'warning' ? <AlertTriangle size={20} /> :
@@ -828,7 +828,7 @@ export default function ExtractionTools() {
                     </div>
                     <div>
                         <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Client-Specific Extraction</h2>
-                        <p className="text-sm text-gray-500">Discover essential services within a 5km radius of a specific client location.</p>
+                        <p className="text-sm text-gray-500">Discover essential services within a 10km radius of a specific client location.</p>
                     </div>
                 </div>
 

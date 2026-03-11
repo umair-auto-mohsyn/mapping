@@ -82,7 +82,7 @@ export async function POST(request: Request) {
                     locationBias: {
                         circle: {
                             center: { latitude: lat, longitude: lng },
-                            radius: 5000.0 // 5km strict radius
+                            radius: 10000.0 // 10km expanded radius
                         }
                     }
                 };

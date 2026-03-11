@@ -27,7 +27,7 @@ export async function GET() {
                     service.latitude,
                     service.longitude
                 );
-                return dist <= 5; // Align with extraction radius
+                return dist <= 10; // Expanded radius for broader coverage
             });
 
             const coveredCategories = new Set(nearbyServices.map(s => s.category));
