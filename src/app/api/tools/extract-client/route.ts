@@ -138,6 +138,7 @@ export async function POST(request: Request) {
                         totalExtracted++;
                     }
 
+                    console.log(`[Client Extract] Category: ${cat.name}, Found: ${places.length}, Total New: ${newServices.length}, Total Skipped: ${skippedCount}`);
                     nextPageToken = data.nextPageToken;
                     pageCount++;
 

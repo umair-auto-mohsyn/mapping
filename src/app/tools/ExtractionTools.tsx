@@ -637,6 +637,31 @@ export default function ExtractionTools() {
                                     <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em]">Enriching 5 unique categories per batch</p>
                                 </div>
                             </div>
+
+                            {/* Batch Result Message */}
+                            {clientResult && !isExtractingClient && (
+                                <div className={`p-6 rounded-[1.5rem] border animate-in slide-in-from-top-4 duration-300 ${clientResult.status === 'success' ? 'bg-green-50/50 border-green-200 text-green-900' :
+                                        clientResult.status === 'warning' ? 'bg-amber-50/50 border-amber-200 text-amber-900' :
+                                            'bg-red-50/50 border-red-200 text-red-900'
+                                    }`}>
+                                    <div className="flex items-start gap-4">
+                                        <div className={`mt-0.5 ${clientResult.status === 'success' ? 'text-green-600' :
+                                                clientResult.status === 'warning' ? 'text-amber-600' :
+                                                    'text-red-600'
+                                            }`}>
+                                            {clientResult.status === 'success' ? <CheckCircle2 size={20} /> :
+                                                clientResult.status === 'warning' ? <AlertTriangle size={20} /> :
+                                                    <XCircle size={20} />}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="text-sm font-black uppercase tracking-tight">
+                                                {clientResult.status === 'success' ? 'Batch Successful' : 'Notice'}
+                                            </h4>
+                                            <p className="text-xs font-medium opacity-80 leading-relaxed">{clientResult.message}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Queue Grid Area */}
@@ -654,8 +679,8 @@ export default function ExtractionTools() {
                                     <div
                                         key={item.id}
                                         className={`group relative flex items-center gap-4 p-5 rounded-[1.5rem] border transition-all duration-300 ${idx === 0
-                                                ? 'bg-amber-50 border-amber-200 shadow-lg shadow-amber-100/50 scale-[1.02] z-10'
-                                                : 'bg-white border-gray-100 hover:border-amber-200 hover:shadow-xl hover:shadow-gray-100 hover:-translate-y-1'
+                                            ? 'bg-amber-50 border-amber-200 shadow-lg shadow-amber-100/50 scale-[1.02] z-10'
+                                            : 'bg-white border-gray-100 hover:border-amber-200 hover:shadow-xl hover:shadow-gray-100 hover:-translate-y-1'
                                             }`}
                                     >
                                         {/* Entry Rank */}
