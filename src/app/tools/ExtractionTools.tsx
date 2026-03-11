@@ -599,17 +599,18 @@ export default function ExtractionTools() {
                                     <div className="relative w-24 h-24 shrink-0">
                                         <svg className="w-full h-full transform -rotate-90">
                                             <circle cx="48" cy="48" r="42" className="stroke-white/10 fill-none" strokeWidth="6" />
+                                            {/* Attempted/Processed Progress (Found + Empty) */}
                                             <circle
                                                 cx="48" cy="48" r="42"
                                                 className="stroke-amber-400 fill-none transition-all duration-1000"
                                                 strokeWidth="6"
                                                 strokeDasharray={264}
-                                                strokeDashoffset={264 - (264 * (28 - unenrichedClients[0].missingCount) / 28)}
+                                                strokeDashoffset={264 - (264 * (28 - (unenrichedClients[0] as any).unattemptedCount) / 28)}
                                                 strokeLinecap="round"
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-2xl font-black leading-none">{28 - unenrichedClients[0].missingCount}</span>
+                                            <span className="text-2xl font-black leading-none">{28 - (unenrichedClients[0] as any).unattemptedCount}</span>
                                             <span className="text-[10px] font-bold opacity-40 uppercase tracking-tighter">/ 28</span>
                                         </div>
                                     </div>
@@ -617,13 +618,15 @@ export default function ExtractionTools() {
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
                                             <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-                                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Priority Target Identified</span>
+                                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">
+                                                {(unenrichedClients[0] as any).isInProgress ? "Actively Enriching" : "Priority Target Identified"}
+                                            </span>
                                         </div>
                                         <h3 className="text-3xl font-black tracking-tight">{unenrichedClients[0].client.firstName} {unenrichedClients[0].client.lastName}</h3>
                                         <div className="flex flex-wrap items-center gap-4 text-sm font-medium opacity-60">
                                             <span className="flex items-center gap-1.5 font-bold text-amber-500/80"><MapPin size={14} /> {unenrichedClients[0].client.city}</span>
                                             <span className="w-1 h-1 bg-white/20 rounded-full" />
-                                            <span>Missing {unenrichedClients[0].missingCount} Categories</span>
+                                            <span>{28 - (unenrichedClients[0] as any).unattemptedCount} Processed </span>
                                             <span className="w-1 h-1 bg-white/20 rounded-full" />
                                             <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded border border-white/10">GPS: {unenrichedClients[0].client.latitude.toFixed(4)}, {unenrichedClients[0].client.longitude.toFixed(4)}</span>
                                         </div>
@@ -716,7 +719,7 @@ export default function ExtractionTools() {
 
                                         <div className={`w-12 h-12 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-colors ${idx === 0 ? 'bg-amber-400 border-amber-500 text-white' : 'bg-gray-50 border-gray-100 text-gray-900 group-hover:bg-amber-50'
                                             }`}>
-                                            <span className="text-[14px] font-black leading-none">{28 - item.missingCount}</span>
+                                            <span className="text-[14px] font-black leading-none">{28 - (item as any).unattemptedCount}</span>
                                             <span className={`text-[8px] font-bold uppercase opacity-60 ${idx === 0 ? 'text-white' : 'text-gray-400'}`}>/ 28</span>
                                         </div>
 
