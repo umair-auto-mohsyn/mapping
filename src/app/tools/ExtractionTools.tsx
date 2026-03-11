@@ -468,8 +468,12 @@ export default function ExtractionTools() {
                     throw new Error(data.error || "Failed to extract");
                 } else {
                     setClientResult({
-                        status: 'success',
-                        message: `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped (duplicates). 30-day cooldown started.`,
+                        status: data.savedCount > 0 ? 'success' : 'warning',
+                        message: data.savedCount > 0
+                            ? `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped. 30-day cooldown started.`
+                            : (data.emptyCategories?.length > 0 
+                                ? `No data found for ${data.emptyCategories.join(", ")} within 10km of this client.`
+                                : `Checked ${clientCategories.join(", ")}, but no new unique services found.`),
                         count: data.savedCount
                     });
                     // Refresh cooldowns immediately
@@ -537,8 +541,8 @@ export default function ExtractionTools() {
             setClientResult({
                 status: data.savedCount > 0 ? 'success' : 'warning',
                 message: data.savedCount > 0
-                    ? `Successfully enriched ${target.client.firstName} with ${data.savedCount} new service(s) across ${batch.join(", ")}.`
-                    : `Checked ${batch.join(", ")}, but no new unique services were found in this area.`
+                    ? `Successfully enriched ${target.client.firstName} with ${data.savedCount} new service(s). Found: ${data.foundCategories?.join(", ") || "None"}.`
+                    : `No data found for ${data.emptyCategories?.join(", ") || batch.join(", ")} within 10km of this client.`
             });
             // Refresh coverage to update the list
             await fetchCoverage();
@@ -616,10 +620,12 @@ export default function ExtractionTools() {
                                             <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Priority Target Identified</span>
                                         </div>
                                         <h3 className="text-3xl font-black tracking-tight">{unenrichedClients[0].client.firstName} {unenrichedClients[0].client.lastName}</h3>
-                                        <div className="flex items-center gap-4 text-sm font-medium opacity-60">
-                                            <span className="flex items-center gap-1.5"><MapPin size={14} /> {unenrichedClients[0].client.city}</span>
+                                        <div className="flex flex-wrap items-center gap-4 text-sm font-medium opacity-60">
+                                            <span className="flex items-center gap-1.5 font-bold text-amber-500/80"><MapPin size={14} /> {unenrichedClients[0].client.city}</span>
                                             <span className="w-1 h-1 bg-white/20 rounded-full" />
                                             <span>Missing {unenrichedClients[0].missingCount} Categories</span>
+                                            <span className="w-1 h-1 bg-white/20 rounded-full" />
+                                            <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded border border-white/10">GPS: {unenrichedClients[0].client.latitude.toFixed(4)}, {unenrichedClients[0].client.longitude.toFixed(4)}</span>
                                         </div>
                                     </div>
                                 </div>

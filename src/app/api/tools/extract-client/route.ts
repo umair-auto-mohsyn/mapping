@@ -66,9 +66,12 @@ export async function POST(request: Request) {
         let totalExtracted = 0;
         let skippedCount = 0;
         const newServices: Service[] = [];
+        const foundCategories: string[] = [];
+        const emptyCategories: string[] = [];
 
         // 4. Extract using New Places API
         for (const cat of selectedCategories) {
+            let catFoundAny = false;
             if (totalExtracted >= MAX_CLIENT_RECORDS) break;
 
             let nextPageToken: string | undefined = undefined;
@@ -79,10 +82,10 @@ export async function POST(request: Request) {
                     textQuery: cat.query,
                     languageCode: "en",
                     maxResultCount: 20,
-                    locationBias: {
+                    locationRestriction: {
                         circle: {
                             center: { latitude: lat, longitude: lng },
-                            radius: 10000.0 // 10km expanded radius
+                            radius: 10000.0 // 10km strict radius
                         }
                     }
                 };
@@ -102,8 +105,11 @@ export async function POST(request: Request) {
                         body: JSON.stringify(payload)
                     });
 
-                    const data = await response.json();
                     const places = data.places || [];
+
+                    if (places.length > 0) {
+                        catFoundAny = true;
+                    }
 
                     for (const place of places) {
                         if (totalExtracted >= MAX_CLIENT_RECORDS) break;
@@ -149,6 +155,10 @@ export async function POST(request: Request) {
                     console.error(`[Client Extract] Error fetching page ${pageCount} for ${cat.name}:`, err.message);
                     break;
                 }
+            if (catFoundAny) {
+                foundCategories.push(cat.name);
+            } else {
+                emptyCategories.push(cat.name);
             }
         }
 
@@ -163,6 +173,8 @@ export async function POST(request: Request) {
         return NextResponse.json({
             savedCount: newServices.length,
             skippedCount: skippedCount,
+            foundCategories,
+            emptyCategories,
             message: "Extraction complete"
         });
 
