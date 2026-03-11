@@ -105,6 +105,7 @@ export async function POST(request: Request) {
                         body: JSON.stringify(payload)
                     });
 
+                    const data = await response.json();
                     const places = data.places || [];
 
                     if (places.length > 0) {
@@ -155,6 +156,7 @@ export async function POST(request: Request) {
                     console.error(`[Client Extract] Error fetching page ${pageCount} for ${cat.name}:`, err.message);
                     break;
                 }
+            }
             if (catFoundAny) {
                 foundCategories.push(cat.name);
             } else {
