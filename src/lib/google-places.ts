@@ -31,6 +31,7 @@ export const CATEGORY_SEARCH_CONFIG: Record<string, { types: string[], keyword?:
     "Plumber": { types: ["plumber"], keyword: "Plumber" },
     "Police Station": { types: ["police"], keyword: "Police Station" },
     "Burn Emergency Hospital": { types: ["hospital"], keyword: "Burn Emergency Center" },
+    "Supermarket": { types: ["supermarket"], keyword: "Supermarket Grocery" },
 };
 
 export const STANDARD_CATEGORIES = Object.keys(CATEGORY_SEARCH_CONFIG);

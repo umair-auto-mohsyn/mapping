@@ -21,12 +21,13 @@ const PAKISTAN_CITIES = [
 ];
 
 const ALL_CATEGORIES = [
-    "AC Technition", "Ambulance Service", "Bakery", "Car Repair", "Child day care",
-    "Clinic", "Electrician", "Electricity Provider Office", "Female Salon", "Fire Station",
-    "Flower Shops", "Gas Provider", "Gas cylinder Services", "Hardware Store", "Home Chef",
-    "Hospital", "Internet Service Provider", "Laboratory", "Male Salon", "Mason Service",
-    "Medical Equipment Supplier", "Medical Store", "Mineral Water home delivery", "Old age houses",
-    "Pharmacy", "Plumber", "Police Station", "Burn Emergency Hospital"
+    "AC Technition", "Ambulance Service", "Bakery", "Burn Emergency Hospital",
+    "Car Repair", "Child day care", "Clinic", "Electrician", "Electricity Provider Office",
+    "Female Salon", "Fire Station", "Flower Shops", "Gas Provider", "Gas cylinder Services",
+    "Hardware Store", "Home Chef", "Hospital", "Internet Service Provider", "Laboratory",
+    "Male Salon", "Mason Service", "Medical Equipment Supplier", "Medical Store",
+    "Mineral Water home delivery", "Old age houses", "Pharmacy", "Plumber",
+    "Police Station", "Supermarket"
 ];
 
 // --- Sub-Component: Searchable Select ---
