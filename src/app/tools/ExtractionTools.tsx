@@ -545,84 +545,166 @@ export default function ExtractionTools() {
 
             {/* --- Section 0: Coverage Optimizer --- */}
             {unenrichedClients.length > 0 && (
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-8 border border-amber-200 shadow-md space-y-6">
-                    <div className="flex items-start gap-4">
-                        <div className="bg-amber-100 p-3 rounded-2xl text-amber-600 animate-pulse">
-                            <AlertTriangle size={24} />
-                        </div>
-                        <div className="flex-1">
-                            <h2 className="text-xl font-black text-amber-900 uppercase tracking-tight">Coverage Optimizer</h2>
-                            <p className="text-sm text-amber-800 font-medium">Detection complete: Found <strong>{unenrichedClients.length} clients</strong> missing nearby service data.</p>
-                            {newCities.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                    <span className="text-[10px] font-black bg-amber-200 text-amber-900 px-2 py-1 rounded-md uppercase tracking-widest">New Cities Detected:</span>
-                                    {newCities.map(city => (
-                                        <span key={city} className="text-[10px] font-bold bg-white/50 text-amber-900 px-2 py-1 rounded-md border border-amber-200">{city}</span>
-                                    ))}
+                <div className="relative overflow-hidden bg-white rounded-[2.5rem] p-1 border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all">
+                    {/* Decorative Background Blur */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-amber-100/30 blur-[100px] -mr-32 -mt-16 rounded-full" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-100/20 blur-[80px] -ml-24 -mb-16 rounded-full" />
+
+                    <div className="relative p-8 md:p-10 space-y-10">
+                        {/* Header Area */}
+                        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                            <div className="flex items-start gap-5">
+                                <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-4 rounded-3xl text-white shadow-lg shadow-amber-200">
+                                    <Database size={28} />
                                 </div>
-                            )}
-                        </div>
-                        <button
-                            onClick={fetchCoverage}
-                            disabled={isAnalyzing}
-                            className="bg-white hover:bg-amber-100 text-amber-900 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-amber-200 transition-all flex items-center gap-2"
-                        >
-                            <RotateCcw size={14} className={isAnalyzing ? "animate-spin" : ""} /> Refresh
-                        </button>
-                    </div>
-
-                    <div className="bg-white/40 rounded-2xl p-6 border border-amber-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-amber-200 flex items-center justify-center font-black text-amber-900 text-lg">
-                                {28 - unenrichedClients[0].missingCount}/28
-                            </div>
-                            <div>
-                                <h3 className="font-black text-amber-900 uppercase tracking-tight">Next suggested: {unenrichedClients[0].client.firstName} {unenrichedClients[0].client.lastName}</h3>
-                                <p className="text-xs text-amber-700 font-bold">{unenrichedClients[0].client.city} • Missing {unenrichedClients[0].missingCount} Categories</p>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={handleBatchEnrichment}
-                            disabled={isExtractingClient}
-                            className="bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-3 shrink-0"
-                        >
-                            {isExtractingClient ? (
-                                <><Loader2 size={18} className="animate-spin" /> Processing...</>
-                            ) : (
-                                <>Enrich 5 Categories <ArrowRight size={18} /></>
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Pending Queue List */}
-                    <div className="space-y-3">
-                        <h3 className="text-[10px] font-black text-amber-700 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                            <Loader2 size={10} className={isAnalyzing ? "animate-spin" : ""} /> Pending Enrichment Queue ({unenrichedClients.length})
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {unenrichedClients.map((item, idx) => (
-                                <div
-                                    key={item.id}
-                                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${idx === 0 ? 'bg-amber-100/50 border-amber-300 shadow-sm' : 'bg-white/30 border-amber-100 hover:bg-white/50'
-                                        }`}
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-[10px] font-black text-amber-900 shrink-0">
-                                        {28 - item.missingCount}/28
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-2xl font-black text-gray-900 tracking-tight">Coverage Manager</h2>
+                                        <span className="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-200">
+                                            {unenrichedClients.length} Blind Spots
+                                        </span>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-black text-amber-900 truncate uppercase tracking-tight">{item.client.firstName} {item.client.lastName}</p>
-                                        <p className="text-[9px] text-amber-700 font-bold truncate uppercase">{item.client.city}</p>
-                                    </div>
-                                    {idx === 0 && (
-                                        <span className="text-[8px] font-black bg-amber-600 text-white px-1.5 py-0.5 rounded uppercase leading-none">Next</span>
-                                    )}
+                                    <p className="text-sm text-gray-400 font-medium">Automatic detection identified clients missing regional service data.</p>
                                 </div>
-                            ))}
+                            </div>
+                            <button
+                                onClick={fetchCoverage}
+                                disabled={isAnalyzing}
+                                className="group flex items-center gap-2 px-5 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 text-xs font-black uppercase tracking-widest rounded-2xl border border-gray-100 transition-all active:scale-95"
+                            >
+                                <RotateCcw size={14} className={`transition-transform duration-700 ${isAnalyzing ? "animate-spin" : "group-hover:rotate-180"}`} />
+                                Refresh Audit
+                            </button>
+                        </div>
+
+                        {/* Hero Action Card (Next Suggested) */}
+                        <div className="relative group overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 rounded-[2rem] p-1 shadow-2xl">
+                            <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+
+                            <div className="relative bg-white/5 backdrop-blur-sm rounded-[1.9rem] p-8 flex flex-col lg:flex-row items-center justify-between gap-8 border border-white/10">
+                                <div className="flex items-center gap-8 text-white">
+                                    {/* Circular Progress Indicator */}
+                                    <div className="relative w-24 h-24 shrink-0">
+                                        <svg className="w-full h-full transform -rotate-90">
+                                            <circle cx="48" cy="48" r="42" className="stroke-white/10 fill-none" strokeWidth="6" />
+                                            <circle
+                                                cx="48" cy="48" r="42"
+                                                className="stroke-amber-400 fill-none transition-all duration-1000"
+                                                strokeWidth="6"
+                                                strokeDasharray={264}
+                                                strokeDashoffset={264 - (264 * (28 - unenrichedClients[0].missingCount) / 28)}
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                            <span className="text-2xl font-black leading-none">{28 - unenrichedClients[0].missingCount}</span>
+                                            <span className="text-[10px] font-bold opacity-40 uppercase tracking-tighter">/ 28</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Priority Target Identified</span>
+                                        </div>
+                                        <h3 className="text-3xl font-black tracking-tight">{unenrichedClients[0].client.firstName} {unenrichedClients[0].client.lastName}</h3>
+                                        <div className="flex items-center gap-4 text-sm font-medium opacity-60">
+                                            <span className="flex items-center gap-1.5"><MapPin size={14} /> {unenrichedClients[0].client.city}</span>
+                                            <span className="w-1 h-1 bg-white/20 rounded-full" />
+                                            <span>Missing {unenrichedClients[0].missingCount} Categories</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col items-center gap-4 w-full lg:w-auto">
+                                    <button
+                                        onClick={handleBatchEnrichment}
+                                        disabled={isExtractingClient}
+                                        className="relative w-full lg:w-auto px-10 py-5 bg-amber-400 hover:bg-amber-300 disabled:bg-gray-700 disabled:text-gray-500 text-gray-900 font-black uppercase tracking-widest rounded-2xl transition-all shadow-[0_15px_30px_rgba(251,191,36,0.2)] active:translate-y-1 block h-[64px]"
+                                    >
+                                        {isExtractingClient ? (
+                                            <div className="flex items-center justify-center gap-3">
+                                                <Loader2 size={24} className="animate-spin" />
+                                                <span>Extracting...</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center gap-3">
+                                                <span>Start Phase {Math.ceil((28 - unenrichedClients[0].missingCount) / 5) + 1}</span>
+                                                <ArrowRight size={20} />
+                                            </div>
+                                        )}
+                                    </button>
+                                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em]">Enriching 5 unique categories per batch</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Queue Grid Area */}
+                        <div className="space-y-5">
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                                    <Loader2 size={14} className={isAnalyzing ? "animate-spin text-amber-500" : "text-gray-300"} />
+                                    Pending Enrichment Queue
+                                </h3>
+                                <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-3 py-1 rounded-full">{unenrichedClients.length} PENDING</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {unenrichedClients.map((item, idx) => (
+                                    <div
+                                        key={item.id}
+                                        className={`group relative flex items-center gap-4 p-5 rounded-[1.5rem] border transition-all duration-300 ${idx === 0
+                                                ? 'bg-amber-50 border-amber-200 shadow-lg shadow-amber-100/50 scale-[1.02] z-10'
+                                                : 'bg-white border-gray-100 hover:border-amber-200 hover:shadow-xl hover:shadow-gray-100 hover:-translate-y-1'
+                                            }`}
+                                    >
+                                        {/* Entry Rank */}
+                                        <div className={`absolute top-0 right-0 mt-3 mr-3 text-[10px] font-black transition-opacity ${idx === 0 ? 'opacity-100' : 'opacity-10 group-hover:opacity-100'}`}>
+                                            #{idx + 1}
+                                        </div>
+
+                                        <div className={`w-12 h-12 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-colors ${idx === 0 ? 'bg-amber-400 border-amber-500 text-white' : 'bg-gray-50 border-gray-100 text-gray-900 group-hover:bg-amber-50'
+                                            }`}>
+                                            <span className="text-[14px] font-black leading-none">{28 - item.missingCount}</span>
+                                            <span className={`text-[8px] font-bold uppercase opacity-60 ${idx === 0 ? 'text-white' : 'text-gray-400'}`}>/ 28</span>
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-black truncate uppercase tracking-tight ${idx === 0 ? 'text-amber-900' : 'text-gray-900'}`}>
+                                                {item.client.firstName} {item.client.lastName}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className={`text-[9px] font-bold truncate uppercase ${idx === 0 ? 'text-amber-700' : 'text-gray-400'}`}>
+                                                    {item.client.city}
+                                                </span>
+                                                {item.isNewCity && (
+                                                    <>
+                                                        <span className="w-1 h-1 bg-amber-300 rounded-full" />
+                                                        <span className="text-[8px] font-black text-amber-600 uppercase">New City</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {idx === 0 && (
+                                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Footer Disclaimer */}
+                        <div className="pt-6 border-t border-gray-50 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-green-50 text-green-500 flex items-center justify-center">
+                                    <Check size={14} />
+                                </div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Smart Deduplication Engine Active</p>
+                            </div>
+                            <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter italic">Only unique regional records will persist.</p>
                         </div>
                     </div>
-
-                    <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest text-center italic border-t border-amber-200/50 pt-4">Strong deduplication enforced: only new unique records will be saved.</p>
                 </div>
             )}
 
