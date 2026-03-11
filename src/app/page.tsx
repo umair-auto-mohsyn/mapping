@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSession, signOut } from "next-auth/react";
 import { Client, Service } from "@/types";
+import { useMapContext } from "@/context/MapContext";
 import { calculateDistance } from "@/lib/utils";
 import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck, LogOut, Wrench } from "lucide-react";
 import Link from "next/link";
@@ -38,10 +39,21 @@ export default function Home() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { data: session, status } = useSession();
 
-    // Field-specific search states
-    const [citySearch, setCitySearch] = useState("");
-    const [clientSearch, setClientSearch] = useState("");
-    const [categorySearch, setCategorySearch] = useState("");
+    const { filters, updateFilters } = useMapContext();
+
+    // Field-specific search states (Now from context)
+    const { 
+        citySearch, clientSearch, categorySearch, 
+        selectedCity, selectedClient, selectedCategories, selectedRadius 
+    } = filters;
+
+    const setCitySearch = (val: string) => updateFilters({ citySearch: val });
+    const setClientSearch = (val: string) => updateFilters({ clientSearch: val });
+    const setCategorySearch = (val: string) => updateFilters({ categorySearch: val });
+    const setSelectedCity = (val: string) => updateFilters({ selectedCity: val });
+    const setSelectedClient = (val: Client | null) => updateFilters({ selectedClient: val });
+    const setSelectedCategories = (val: string[]) => updateFilters({ selectedCategories: val });
+    const setSelectedRadius = (val: number | "ALL") => updateFilters({ selectedRadius: val });
 
     const fetchData = async (optimisticService?: Service) => {
         try {
@@ -77,11 +89,6 @@ export default function Home() {
         fetchData();
     }, []);
 
-    // Filter state
-    const [selectedCity, setSelectedCity] = useState<string>("");
-    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [selectedRadius, setSelectedRadius] = useState<number | "ALL">("ALL");
 
     // Filter sequences
     const filteredCitiesList = useMemo(() => {

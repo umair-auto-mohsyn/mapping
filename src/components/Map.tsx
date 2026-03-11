@@ -12,6 +12,7 @@ import { Client, Service } from "@/types";
 import { CATEGORY_COLORS } from "@/lib/utils";
 import { MapPin, RotateCcw, Share2, Copy, CheckCircle2, Plus, Loader2 } from "lucide-react";
 import { normalizeGooglePlace } from "@/lib/google-places";
+import { useMapContext } from "@/context/MapContext";
 
 interface MapProps {
     selectedCity: string;
@@ -48,9 +49,13 @@ function MapCircle({ center, radius }: { center: google.maps.LatLngLiteral; radi
 
 export default function Map({ selectedCity, selectedClient, filteredServices, allServices, radius, onDataUpdate }: MapProps) {
     const map = useMap();
+    const { viewState, setViewState } = useMapContext();
     const [selectedService, setSelectedService] = useState<DisplayService | null>(null);
     const [justAddedId, setJustAddedId] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+
+    // Track initialization to avoid over-panning
+    const isInitializedRef = useRef(false);
 
     // Hybrid rendering threshold
     const useImperative = filteredServices.length > 50;
@@ -166,17 +171,22 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
         }
     }, [processedServices, justAddedId]);
 
-    // Center map logic
+    // Center map logic - Only run when filters change manually
     useEffect(() => {
         if (!map) return;
+        
+        // If this is the first load, use the saved viewState from context
+        if (!isInitializedRef.current) {
+            map.setCenter(viewState.center);
+            map.setZoom(viewState.zoom);
+            isInitializedRef.current = true;
+            return;
+        }
 
         if (selectedClient) {
             const pos = { lat: selectedClient.latitude, lng: selectedClient.longitude };
 
             if (radius !== "ALL") {
-                // Zoom to fit radius
-                // Approx mapping of radius to zoom level for Google Maps
-                // 5km -> 13, 10km -> 12, 20km -> 11
                 const zoomMap: Record<number, number> = {
                     5: 13,
                     10: 12,
@@ -185,12 +195,10 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                 map.setCenter(pos);
                 map.setZoom(zoomMap[radius as number] || 12);
             } else {
-                // "ALL" - Show city but zoom out a bit
                 map.setCenter(pos);
-                map.setZoom(12); // Slightly more zoomed out than a specific client focus (14)
+                map.setZoom(12);
             }
         } else if (selectedCity) {
-            // Find services in this city to center
             const cityServices = filteredServices.filter(s => s.city.toLowerCase() === selectedCity.toLowerCase());
 
             if (cityServices.length > 0) {
@@ -214,11 +222,19 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
         <div className="w-full h-full">
             <GoogleMap
                 style={{ width: "100%", height: "100%" }}
-                defaultCenter={{ lat: 30.3753, lng: 69.3451 }}
-                defaultZoom={6}
+                defaultCenter={viewState.center}
+                defaultZoom={viewState.zoom}
                 maxZoom={19}
                 gestureHandling={"greedy"}
                 disableDefaultUI={false}
+                onCameraChanged={(ev) => {
+                    const center = ev.detail.center;
+                    const zoom = ev.detail.zoom;
+                    setViewState({
+                        center: { lat: center.lat, lng: center.lng },
+                        zoom: zoom
+                    });
+                }}
             >
                 {/* Client Marker */}
                 {selectedClient && (
