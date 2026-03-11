@@ -39,8 +39,8 @@ export async function POST(request: Request) {
                 error: `Categories on cooldown for this location: ${requestedLocked.join(", ")}. Please wait 30 days.`
             }, { status: 403 });
         }
-        if (categories.length > 4) {
-            return NextResponse.json({ error: "Maximum 4 categories allowed at a time" }, { status: 400 });
+        if (categories.length > 5) {
+            return NextResponse.json({ error: "Maximum 5 categories allowed at a time" }, { status: 400 });
         }
 
         // Map selected names to their search config

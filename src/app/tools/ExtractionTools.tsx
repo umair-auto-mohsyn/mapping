@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Loader2, Database, MapPin, CheckCircle2, AlertTriangle, ArrowRight, Search, X, Check, ChevronDown, Filter } from "lucide-react";
+import { Loader2, Database, MapPin, CheckCircle2, AlertTriangle, ArrowRight, Search, X, Check, ChevronDown, Filter, RotateCcw } from "lucide-react";
 
 const PAKISTAN_CITIES = [
     "Abbottabad", "Ahmedpur East", "Arif Wala", "Attock", "Badin", "Bahawalnagar",
@@ -120,7 +120,7 @@ function SearchableMultiSelect({
     onToggle,
     placeholder,
     disabled,
-    max = 4,
+    max = 5,
     lockedOptions = []
 }: {
     options: string[],
@@ -278,6 +278,24 @@ export default function ExtractionTools() {
     const [clientProgress, setClientProgress] = useState(0);
     const [clientResult, setClientResult] = useState<{ status: 'success' | 'error' | 'warning', message: string, count?: number } | null>(null);
 
+    // --- State: Coverage Optimizer ---
+    const [unenrichedClients, setUnenrichedClients] = useState<any[]>([]);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [enrichmentProgress, setEnrichmentProgress] = useState<{ clientId: string, currentBatch: number, totalBatches: number } | null>(null);
+
+    const fetchCoverage = async () => {
+        setIsAnalyzing(true);
+        try {
+            const res = await fetch("/api/tools/analyze-coverage");
+            const data = await res.json();
+            setUnenrichedClients(data.unenrichedClients || []);
+        } catch (err) {
+            console.error("Coverage fetch error:", err);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     useEffect(() => {
         fetch("/api/data")
             .then(res => res.json())
@@ -288,6 +306,8 @@ export default function ExtractionTools() {
             })
             .catch(err => console.error("Error fetching clients:", err))
             .finally(() => setIsLoadingClients(false));
+
+        fetchCoverage();
     }, []);
 
     // Unified Refresh Function for City
@@ -364,7 +384,7 @@ export default function ExtractionTools() {
     const toggleCategory = (list: string[], setList: (val: string[]) => void, cat: string) => {
         if (list.includes(cat)) {
             setList(list.filter(c => c !== cat));
-        } else if (list.length < 4) {
+        } else if (list.length < 5) {
             setList([...list, cat]);
         }
     };
@@ -469,8 +489,114 @@ export default function ExtractionTools() {
         }
     };
 
+    const handleBatchEnrichment = async () => {
+        if (unenrichedClients.length === 0) return;
+
+        const target = unenrichedClients[0];
+        const categoriesToExtract = target.missingCategories.slice(0, 5);
+
+        setIsExtractingClient(true);
+        setClientResult(null);
+        setClientProgress(5);
+
+        try {
+            const response = await fetch("/api/tools/extract-client", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    lat: target.client.latitude,
+                    lng: target.client.longitude,
+                    city: target.client.city,
+                    clientId: target.client.id,
+                    categories: categoriesToExtract
+                }),
+            });
+
+            const data = await response.json();
+            setClientProgress(100);
+
+            setTimeout(async () => {
+                if (!response.ok) {
+                    setClientResult({ status: 'error', message: data.error || "Batch failed" });
+                } else {
+                    setClientResult({
+                        status: 'success',
+                        message: `Successfully enriched ${target.client.firstName} with 5 categories (${categoriesToExtract.join(", ")}). Please click again for the next batch.`
+                    });
+                    // Refresh coverage to update the list
+                    await fetchCoverage();
+                }
+                setIsExtractingClient(false);
+            }, 500);
+
+        } catch (error: any) {
+            setClientProgress(100);
+            setTimeout(() => {
+                setClientResult({ status: 'error', message: error.message });
+                setIsExtractingClient(false);
+            }, 500);
+        }
+    };
+
+    const newCities = Array.from(new Set(unenrichedClients.filter(c => c.isNewCity).map(c => c.client.city)));
+
     return (
         <div className="p-6 md:p-10 space-y-12 max-w-5xl mx-auto">
+
+            {/* --- Section 0: Coverage Optimizer --- */}
+            {unenrichedClients.length > 0 && (
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-8 border border-amber-200 shadow-md space-y-6">
+                    <div className="flex items-start gap-4">
+                        <div className="bg-amber-100 p-3 rounded-2xl text-amber-600 animate-pulse">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <h2 className="text-xl font-black text-amber-900 uppercase tracking-tight">Coverage Optimizer</h2>
+                            <p className="text-sm text-amber-800 font-medium">Detection complete: Found <strong>{unenrichedClients.length} clients</strong> missing nearby service data.</p>
+                            {newCities.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    <span className="text-[10px] font-black bg-amber-200 text-amber-900 px-2 py-1 rounded-md uppercase tracking-widest">New Cities Detected:</span>
+                                    {newCities.map(city => (
+                                        <span key={city} className="text-[10px] font-bold bg-white/50 text-amber-900 px-2 py-1 rounded-md border border-amber-200">{city}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={fetchCoverage}
+                            disabled={isAnalyzing}
+                            className="bg-white hover:bg-amber-100 text-amber-900 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-amber-200 transition-all flex items-center gap-2"
+                        >
+                            <RotateCcw size={14} className={isAnalyzing ? "animate-spin" : ""} /> Refresh
+                        </button>
+                    </div>
+
+                    <div className="bg-white/40 rounded-2xl p-6 border border-amber-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-amber-200 flex items-center justify-center font-black text-amber-900 text-lg">
+                                {28 - unenrichedClients[0].missingCount}/28
+                            </div>
+                            <div>
+                                <h3 className="font-black text-amber-900 uppercase tracking-tight">Next suggested: {unenrichedClients[0].client.firstName} {unenrichedClients[0].client.lastName}</h3>
+                                <p className="text-xs text-amber-700 font-bold">{unenrichedClients[0].client.city} • Missing {unenrichedClients[0].missingCount} Categories</p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleBatchEnrichment}
+                            disabled={isExtractingClient}
+                            className="bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-3"
+                        >
+                            {isExtractingClient ? (
+                                <><Loader2 size={18} className="animate-spin" /> Processing...</>
+                            ) : (
+                                <>Enrich 5 Categories <ArrowRight size={18} /></>
+                            )}
+                        </button>
+                    </div>
+                    <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest text-center italic">Strong deduplication enforced: only new unique records will be saved.</p>
+                </div>
+            )}
 
             {/* --- Section 1: City-Wide Extraction --- */}
             <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8">
@@ -516,9 +642,9 @@ export default function ExtractionTools() {
                             options={ALL_CATEGORIES}
                             selected={cityCategories}
                             onToggle={(cat) => toggleCategory(cityCategories, setCityCategories, cat)}
-                            placeholder="Search & select up to 4 categories..."
+                            placeholder="Search & select up to 5 categories..."
                             disabled={isExtractingCity}
-                            max={4}
+                            max={5}
                             lockedOptions={cityLockedCats}
                         />
                     </div>
@@ -603,9 +729,9 @@ export default function ExtractionTools() {
                             options={ALL_CATEGORIES}
                             selected={clientCategories}
                             onToggle={(cat) => toggleCategory(clientCategories, setClientCategories, cat)}
-                            placeholder="Search & select up to 4 categories..."
+                            placeholder="Search & select up to 5 categories..."
                             disabled={isExtractingClient}
-                            max={4}
+                            max={5}
                             lockedOptions={clientLockedCats}
                         />
                     </div>
