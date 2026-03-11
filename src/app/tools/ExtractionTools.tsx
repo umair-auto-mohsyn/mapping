@@ -263,13 +263,6 @@ export default function ExtractionTools() {
     const [clients, setClients] = useState<any[]>([]);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
 
-    // --- State: City Extraction ---
-    const [cityInput, setCityInput] = useState("");
-    const [cityCategories, setCityCategories] = useState<string[]>([]);
-    const [cityLockedCats, setCityLockedCats] = useState<{ category: string, lockedUntil: string }[]>([]);
-    const [isExtractingCity, setIsExtractingCity] = useState(false);
-    const [cityProgress, setCityProgress] = useState(0);
-    const [cityResult, setCityResult] = useState<{ status: 'success' | 'error' | 'warning', message: string, count?: number } | null>(null);
 
     // --- State: Client Extraction ---
     const [selectedClientStr, setSelectedClientStr] = useState("");
@@ -277,6 +270,7 @@ export default function ExtractionTools() {
     const [clientLockedCats, setClientLockedCats] = useState<{ category: string, lockedUntil: string }[]>([]);
     const [isExtractingClient, setIsExtractingClient] = useState(false);
     const [clientProgress, setClientProgress] = useState(0);
+    const [clientRadius, setClientRadius] = useState(10); // 5, 10, 20 km
     const [clientResult, setClientResult] = useState<{ status: 'success' | 'error' | 'warning', message: string, count?: number } | null>(null);
 
     useEffect(() => {
@@ -291,23 +285,6 @@ export default function ExtractionTools() {
             .finally(() => setIsLoadingClients(false));
     }, []);
 
-    // Unified Refresh Function for City
-    const refreshCityCooldowns = (city: string) => {
-        if (!city) {
-            setCityLockedCats([]);
-            return;
-        }
-        const t = new Date().getTime();
-        fetch(`/api/tools/cooldown?target=${encodeURIComponent(city)}&t=${t}`)
-            .then(res => res.json())
-            .then(data => {
-                const locked = data.lockedCategories || [];
-                setCityLockedCats(locked);
-                const lockedNames = new Set(locked.map((l: any) => l.category.toLowerCase()));
-                setCityCategories(prev => prev.filter(cat => !lockedNames.has(cat.toLowerCase())));
-            })
-            .catch(err => console.error("Error fetching city cooldowns:", err));
-    };
 
     // Unified Refresh Function for Client
     const refreshClientCooldowns = (identifier: string) => {
@@ -327,9 +304,6 @@ export default function ExtractionTools() {
             .catch(err => console.error("Error fetching client cooldowns:", err));
     };
 
-    useEffect(() => {
-        refreshCityCooldowns(cityInput);
-    }, [cityInput]);
 
     useEffect(() => {
         const client = clients.find(c => `${c.firstName} ${c.lastName} (${c.city})` === selectedClientStr);
@@ -337,18 +311,6 @@ export default function ExtractionTools() {
         refreshClientCooldowns(identifier);
     }, [selectedClientStr, clients]);
 
-    // Simulated Progress Hooks
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (isExtractingCity && cityProgress < 95) {
-            interval = setInterval(() => {
-                setCityProgress(p => p + (Math.random() * 5));
-            }, 800);
-        } else if (!isExtractingCity) {
-            setCityProgress(0);
-        }
-        return () => clearInterval(interval);
-    }, [isExtractingCity, cityProgress]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -370,51 +332,6 @@ export default function ExtractionTools() {
         }
     };
 
-    const handleCityExtraction = async () => {
-        if (!cityInput || cityCategories.length === 0) return;
-
-        setIsExtractingCity(true);
-        setCityResult(null);
-        setCityProgress(5);
-
-        try {
-            const response = await fetch("/api/tools/extract-city", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    city: cityInput,
-                    categories: cityCategories
-                }),
-            });
-
-            const data = await response.json();
-            setCityProgress(100);
-
-            setTimeout(() => {
-                if (response.status === 403) {
-                    setCityResult({ status: 'warning', message: data.error });
-                } else if (!response.ok) {
-                    throw new Error(data.error || "Failed to extract");
-                } else {
-                    setCityResult({
-                        status: 'success',
-                        message: `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped (duplicates). 30-day cooldown started.`,
-                        count: data.savedCount
-                    });
-                    // Refresh cooldowns immediately
-                    refreshCityCooldowns(cityInput);
-                }
-                setIsExtractingCity(false);
-            }, 500);
-
-        } catch (error: any) {
-            setCityProgress(100);
-            setTimeout(() => {
-                setCityResult({ status: 'error', message: error.message });
-                setIsExtractingCity(false);
-            }, 500);
-        }
-    };
 
     const handleClientExtraction = async () => {
         if (!selectedClientStr || clientCategories.length === 0) return;
@@ -435,7 +352,8 @@ export default function ExtractionTools() {
                     lng: client.longitude,
                     city: client.city,
                     clientId: client.id,
-                    categories: clientCategories
+                    categories: clientCategories,
+                    radius: clientRadius * 1000 // Convert km to meters
                 }),
             });
 
@@ -453,7 +371,7 @@ export default function ExtractionTools() {
                         message: data.savedCount > 0
                             ? `Extracted ${data.savedCount} new services. ${data.skippedCount} skipped. 30-day cooldown started.`
                             : (data.emptyCategories?.length > 0 
-                                ? `No data found for ${data.emptyCategories.join(", ")} within 10km of this client.`
+                                ? `No data found for ${data.emptyCategories.join(", ")} within ${clientRadius}km of this client.`
                                 : `Checked ${clientCategories.join(", ")}, but no new unique services found.`),
                         count: data.savedCount
                     });
@@ -479,92 +397,6 @@ export default function ExtractionTools() {
         <div className="p-6 md:p-10 space-y-12 max-w-5xl mx-auto">
 
 
-            {/* --- Section 1: City-Wide Extraction --- */}
-            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8">
-                <div className="flex items-start gap-4 pb-4 border-b">
-                    <div className="bg-blue-100 p-3 rounded-2xl text-blue-600">
-                        <MapPin size={24} />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">City-Wide Extraction</h2>
-                        <p className="text-sm text-gray-500">Scan entire cities for high-volume data. 30-day cooldown applies per category.</p>
-                    </div>
-                </div>
-
-                <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row gap-4 items-end">
-                        <SearchableSelect
-                            options={PAKISTAN_CITIES}
-                            value={cityInput}
-                            onChange={setCityInput}
-                            placeholder="Search & Select City..."
-                            disabled={isExtractingCity}
-                            icon={MapPin}
-                        />
-                        <button
-                            onClick={handleCityExtraction}
-                            disabled={!cityInput || cityCategories.length === 0 || isExtractingCity}
-                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white px-8 py-3.5 rounded-xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 h-[54px] min-w-[220px]"
-                        >
-                            {isExtractingCity ? (
-                                <><Loader2 size={18} className="animate-spin" /> RUNNING...</>
-                            ) : (
-                                <>EXTRACT DATA <ArrowRight size={18} /></>
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Multi-Select Category Field */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <Filter size={12} /> 3. Service Category (MAX 4)
-                        </label>
-                        <SearchableMultiSelect
-                            options={ALL_CATEGORIES}
-                            selected={cityCategories}
-                            onToggle={(cat) => toggleCategory(cityCategories, setCityCategories, cat)}
-                            placeholder="Search & select up to 5 categories..."
-                            disabled={isExtractingCity}
-                            max={5}
-                            lockedOptions={cityLockedCats}
-                        />
-                    </div>
-
-                    {/* Progress Bar */}
-                    {isExtractingCity && (
-                        <div className="space-y-3 pt-2">
-                            <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-blue-600 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(37,99,235,0.5)]"
-                                    style={{ width: `${cityProgress}%` }}
-                                />
-                            </div>
-                            <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                <span>Scanning Sector Grids...</span>
-                                <span>{Math.round(cityProgress)}%</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Result Message */}
-                    {cityResult && (
-                        <div className={`p-5 rounded-2xl flex items-start gap-4 border animate-in zoom-in-95 duration-200 ${cityResult.status === 'success' ? 'bg-green-50 border-green-200 text-green-900' :
-                            cityResult.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
-                                'bg-red-50 border-red-200 text-red-900'
-                            }`}>
-                            <div className="mt-1">
-                                {cityResult.status === 'success' ? <CheckCircle2 className="text-green-600" /> :
-                                    cityResult.status === 'warning' ? <AlertTriangle className="text-amber-600" /> :
-                                        <X className="text-red-600 border rounded-full p-0.5" />}
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-black text-sm uppercase tracking-tight">{cityResult.status === 'success' ? 'Extraction Complete' : 'Notice'}</h4>
-                                <p className="text-sm font-medium opacity-80 leading-relaxed">{cityResult.message}</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
 
             {/* --- Section 2: Client-Specific Extraction --- */}
             <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8">
@@ -572,9 +404,27 @@ export default function ExtractionTools() {
                     <div className="bg-purple-100 p-3 rounded-2xl text-purple-600">
                         <Database size={24} />
                     </div>
-                    <div>
-                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Client-Specific Extraction</h2>
-                        <p className="text-sm text-gray-500">Discover essential services within a 10km radius of a specific client location.</p>
+                    <div className="flex-1">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Client-Specific Extraction</h2>
+                                <p className="text-sm text-gray-500">Discover essential services within a targeted radius of a specific client location.</p>
+                            </div>
+                            <div className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-2xl border border-gray-100">
+                                {[5, 10, 20].map(r => (
+                                    <button
+                                        key={r}
+                                        onClick={() => setClientRadius(r)}
+                                        className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${clientRadius === r
+                                                ? 'bg-purple-600 text-white shadow-md'
+                                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                                            }`}
+                                    >
+                                        {r}KM
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
