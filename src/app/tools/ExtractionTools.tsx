@@ -567,29 +567,22 @@ export default function ExtractionTools() {
 
                     <div className="relative p-8 md:p-10 space-y-10">
                         {/* Header Area */}
-                        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                            <div className="flex items-start gap-5">
-                                <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-4 rounded-3xl text-white shadow-lg shadow-amber-200">
-                                    <Database size={28} />
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-5">
+                            <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-4 rounded-3xl text-white shadow-lg shadow-amber-200">
+                                <Database size={28} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
                                         <h2 className="text-2xl font-black text-gray-900 tracking-tight">Coverage Manager</h2>
-                                        <span className="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-200">
-                                            {unenrichedClients.length} Blind Spots
-                                        </span>
+                                        <p className="text-sm text-gray-400 font-medium mt-1">Automatic detection identified clients missing regional service data.</p>
                                     </div>
-                                    <p className="text-sm text-gray-400 font-medium">Automatic detection identified clients missing regional service data.</p>
+                                    <div className="px-5 py-2.5 bg-amber-50 rounded-2xl border border-amber-100 flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">{unenrichedClients.length} Blind Spots</span>
+                                    </div>
                                 </div>
                             </div>
-                            <button
-                                onClick={fetchCoverage}
-                                disabled={isAnalyzing}
-                                className="group flex items-center gap-2 px-5 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 text-xs font-black uppercase tracking-widest rounded-2xl border border-gray-100 transition-all active:scale-95"
-                            >
-                                <RotateCcw size={14} className={`transition-transform duration-700 ${isAnalyzing ? "animate-spin" : "group-hover:rotate-180"}`} />
-                                Refresh Audit
-                            </button>
                         </div>
 
                         {/* Hero Action Card (Next Suggested) */}
