@@ -395,20 +395,12 @@ export default function Home() {
                         </div>
                     )} */}
 
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                        <button
-                            onClick={resetFilters}
-                            className="flex items-center justify-center gap-2 text-[10px] text-gray-900 hover:text-blue-600 transition-all font-black uppercase tracking-widest bg-white border border-gray-100 p-2 rounded-xl"
-                        >
-                            <RotateCcw size={14} className="text-blue-600" /> Reset
-                        </button>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="flex items-center justify-center gap-2 text-[10px] text-gray-900 hover:text-green-600 transition-all font-black uppercase tracking-widest bg-white border border-gray-100 p-2 rounded-xl"
-                        >
-                            <RotateCcw size={14} className="text-green-600" /> Refresh
-                        </button>
-                    </div>
+                    <button
+                        onClick={resetFilters}
+                        className="w-full flex items-center justify-center gap-2 text-[10px] text-gray-900 hover:text-blue-600 transition-all pt-2 font-black uppercase tracking-widest"
+                    >
+                        <RotateCcw size={14} className="text-blue-600" /> Reset All
+                    </button>
                 </div>
 
                 <div className="p-3 bg-gray-900 text-white border-t border-white/10 flex justify-between items-center shrink-0">
