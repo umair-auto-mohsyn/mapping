@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
         }),
     ],
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: process.env.NEXTAUTH_SECRET || "p8Xm9K2vW4zQ7fL1nJ5aG0dY3mB8rS6cT2qV1zX9uH4jN7bK5wM3e",
     session: {
         strategy: "jwt",
     },
