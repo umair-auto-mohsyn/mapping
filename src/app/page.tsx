@@ -128,13 +128,13 @@ export default function Home() {
 
         // Filter by city
         if (selectedCity && selectedCity !== "") {
-            services = services.filter((s) => s.city.toLowerCase() === selectedCity.toLowerCase());
+            services = services.filter((s) => s.city.toLowerCase().trim() === selectedCity.toLowerCase().trim());
         }
 
         // Filter by category
         if (selectedCategories.length > 0) {
             services = services.filter((s) =>
-                selectedCategories.some(cat => cat.toLowerCase() === s.category.toLowerCase())
+                selectedCategories.some(cat => cat.toLowerCase().trim() === s.category.toLowerCase().trim())
             );
         }
 
@@ -378,7 +378,11 @@ export default function Home() {
                 </div>
 
                 <div className="p-3 bg-gray-900 text-white border-t border-white/10 flex justify-between items-center shrink-0">
-                    <span className="text-[9px] text-gray-400 uppercase tracking-widest font-black">Status: {filteredServices.length} Results</span>
+                    <span className="text-[9px] text-gray-400 uppercase tracking-widest font-black">
+                        {filteredServices.length === data.services.length 
+                            ? `Showing All: ${data.services.length} Results`
+                            : `Filtered: ${filteredServices.length} of ${data.services.length}`}
+                    </span>
                     <button
                         onClick={() => signOut({ callbackUrl: '/' })}
                         className="text-[9px] text-red-400 hover:text-red-300 uppercase tracking-widest font-black flex items-center gap-1 transition-colors"
