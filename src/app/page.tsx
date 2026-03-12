@@ -154,33 +154,13 @@ export default function Home() {
         return services;
     }, [data.services, selectedCity, selectedCategories, selectedClient, selectedRadius]);
 
-    // Live Search Trigger
+    /* Paused for now - Interactive Discovery logic
     useEffect(() => {
         if (filters.interactiveMode && selectedCategories.length > 0 && selectedClient) {
-            const category = selectedCategories[0];
-            const location = { lat: selectedClient.latitude, lng: selectedClient.longitude };
-            const radiusInMeters = selectedRadius === "ALL" ? 5000 : (Number(selectedRadius) * 1000);
-
-            const performLiveSearch = async () => {
-                try {
-                    const res = await fetch(`/api/tools/extract-client?lat=${location.lat}&lng=${location.lng}&radius=${radiusInMeters}&category=${encodeURIComponent(category)}&dryRun=true`);
-                    const d = await res.json();
-                    if (d.results) {
-                        // Filter out results already in DB
-                        const dbSourceIds = new Set(data.services.map(s => s.source_id));
-                        const newLiveResults = d.results.filter((r: any) => !dbSourceIds.has(r.place_id));
-                        setLiveResults(newLiveResults);
-                    }
-                } catch (e) {
-                    console.error("Live search failed:", e);
-                }
-            };
-
-            performLiveSearch();
-        } else {
-            setLiveResults([]);
+            // ... discovery logic ...
         }
     }, [filters.interactiveMode, selectedCategories, selectedClient, selectedRadius, data.services]);
+    */
 
 
     const resetFilters = () => {
@@ -387,23 +367,12 @@ export default function Home() {
                 </div>
 
                 <div className="p-4 bg-gray-50/50 mt-auto border-t space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex gap-2">
-                            <div className={`p-2 rounded-xl border transition-all ${filters.interactiveMode ? "bg-orange-50 border-orange-100" : "bg-gray-50 border-gray-100"}`}>
-                                <MapPin size={16} className={filters.interactiveMode ? "text-orange-500" : "text-gray-400"} />
-                            </div>
-                            <div className="flex-1 space-y-0.5">
-                                <h3 className="text-[10px] font-black text-gray-900 tracking-tighter uppercase leading-tight">Interactive Mode</h3>
-                                <p className="text-[9px] text-gray-500 font-medium leading-tight">Discover unsaved places</p>
-                            </div>
+                    {/* Paused: Interactive Mode Toggle */}
+                    {/* {session?.user?.role === 'ADMIN' && (
+                        <div className="flex items-center justify-between">
+                            ...
                         </div>
-                        <button
-                            onClick={() => updateFilters({ interactiveMode: !filters.interactiveMode })}
-                            className={`w-10 h-5 rounded-full relative transition-all duration-300 ${filters.interactiveMode ? "bg-orange-500" : "bg-gray-200"}`}
-                        >
-                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${filters.interactiveMode ? "left-6" : "left-1"}`} />
-                        </button>
-                    </div>
+                    )} */}
 
                     <button
                         onClick={resetFilters}
