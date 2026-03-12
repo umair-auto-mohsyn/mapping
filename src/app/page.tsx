@@ -408,25 +408,38 @@ export default function Home() {
                     onDataUpdate={fetchData}
                 />
 
-                {/* Floating Admin Buttons - Only visible to ADMINs and EDITORs */}
+                {/* Floating Admin Dock - Premium UI refinement */}
                 {session?.user?.role && ['ADMIN', 'EDITOR'].includes(session.user.role) && (
-                    <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-3">
-                        <button
-                            onClick={() => setIsExtractionOpen(true)}
-                            className="bg-purple-600 p-3 rounded-2xl shadow-xl hover:bg-purple-700 text-white transition-all border-2 border-purple-500 group relative flex items-center justify-center"
-                            title="Extraction Tools"
-                        >
-                            <Wrench size={20} strokeWidth={4} />
-                            <span className="absolute right-full mr-3 bg-gray-900 text-white text-[10px] font-black py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-lg">Extraction Tools</span>
-                        </button>
-                        <button
-                            onClick={() => setIsAdminOpen(true)}
-                            className="bg-blue-600 p-3 rounded-2xl shadow-xl hover:bg-blue-700 text-white transition-all border-2 border-blue-500 group relative flex items-center justify-center"
-                            title="Quick Add"
-                        >
-                            <Plus size={20} strokeWidth={4} />
-                            <span className="absolute right-full mr-3 bg-gray-900 text-white text-[10px] font-black py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-lg">New Entry</span>
-                        </button>
+                    <div className="absolute bottom-24 right-6 z-[1000] flex flex-col items-center">
+                        <div className="bg-white/80 backdrop-blur-xl p-2.5 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/60 flex flex-col gap-3 group/dock transition-all duration-500 hover:bg-white/90">
+                            <button
+                                onClick={() => setIsExtractionOpen(true)}
+                                className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white rounded-[24px] flex items-center justify-center shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-110 active:scale-95 group relative overflow-hidden"
+                                title="Extraction Tools"
+                            >
+                                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Wrench size={22} strokeWidth={3} className="relative z-10 transition-transform duration-500 group-hover:rotate-12" />
+                                <span className="absolute right-full mr-6 bg-gray-900/95 backdrop-blur-md text-white text-[10px] font-black py-2.5 px-4 rounded-xl opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap uppercase tracking-widest shadow-2xl border border-white/10">
+                                    Extraction Tools
+                                </span>
+                            </button>
+                            
+                            <div className="h-px w-8 bg-gray-200/50 self-center mx-2" />
+
+                            <button
+                                onClick={() => setIsAdminOpen(true)}
+                                className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-[24px] flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all duration-300 hover:scale-110 active:scale-95 group relative overflow-hidden"
+                                title="Add New Entry"
+                            >
+                                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Plus size={26} strokeWidth={3} className="relative z-10 transition-transform duration-500 group-hover:rotate-90" />
+                                <span className="absolute right-full mr-6 bg-gray-900/95 backdrop-blur-md text-white text-[10px] font-black py-2.5 px-4 rounded-xl opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap uppercase tracking-widest shadow-2xl border border-white/10">
+                                    New Entry
+                                </span>
+                            </button>
+                        </div>
+                        {/* Decorative reflection element */}
+                        <div className="mt-2 w-8 h-1 bg-black/10 blur-md rounded-full" />
                     </div>
                 )}
 
