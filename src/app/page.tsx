@@ -26,6 +26,7 @@ const Map = dynamic(() => import("@/components/Map"), {
 });
 
 const AdminPanel = dynamic(() => import("@/components/AdminPanel"), { ssr: false });
+const ExtractionTools = dynamic(() => import("@/components/ExtractionTools"), { ssr: false });
 
 export default function Home() {
     const [data, setData] = useState<{ clients: Client[]; services: Service[]; cities: string[]; categories: string[] }>({
@@ -36,6 +37,7 @@ export default function Home() {
     });
     const [loading, setLoading] = useState(true);
     const [isAdminOpen, setIsAdminOpen] = useState(false);
+    const [isExtractionOpen, setIsExtractionOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { data: session, status } = useSession();
 
@@ -409,14 +411,14 @@ export default function Home() {
                 {/* Floating Admin Buttons - Only visible to ADMINs and EDITORs */}
                 {session?.user?.role && ['ADMIN', 'EDITOR'].includes(session.user.role) && (
                     <div className="absolute bottom-24 right-4 z-[1000] flex flex-col gap-3">
-                        <Link
-                            href="/tools"
+                        <button
+                            onClick={() => setIsExtractionOpen(true)}
                             className="bg-purple-600 p-3 rounded-2xl shadow-xl hover:bg-purple-700 text-white transition-all border-2 border-purple-500 group relative flex items-center justify-center"
                             title="Extraction Tools"
                         >
                             <Wrench size={20} strokeWidth={4} />
                             <span className="absolute right-full mr-3 bg-gray-900 text-white text-[10px] font-black py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-lg">Extraction Tools</span>
-                        </Link>
+                        </button>
                         <button
                             onClick={() => setIsAdminOpen(true)}
                             className="bg-blue-600 p-3 rounded-2xl shadow-xl hover:bg-blue-700 text-white transition-all border-2 border-blue-500 group relative flex items-center justify-center"
@@ -434,6 +436,13 @@ export default function Home() {
                         clients={data.clients || []}
                         services={data.services || []}
                         onDataUpdate={fetchData}
+                    />
+                )}
+
+                {isExtractionOpen && (
+                    <ExtractionTools
+                        onClose={() => setIsExtractionOpen(false)}
+                        onDataUpdate={async () => { await fetchData(); }}
                     />
                 )}
             </div>

@@ -258,7 +258,12 @@ function SearchableMultiSelect({
     );
 }
 
-export default function ExtractionTools() {
+interface ExtractionToolsProps {
+    onClose: () => void;
+    onDataUpdate?: () => Promise<void>;
+}
+
+export default function ExtractionTools({ onClose, onDataUpdate }: ExtractionToolsProps) {
     // --- State: General ---
     const [clients, setClients] = useState<any[]>([]);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
@@ -373,6 +378,11 @@ export default function ExtractionTools() {
                                 : `Checked ${clientCategories.join(", ")}, but no new unique services found.`),
                         count: data.savedCount
                     });
+                    // Refresh map data if something was saved
+                    if (data.savedCount > 0 && onDataUpdate) {
+                        onDataUpdate();
+                    }
+
                     // Refresh cooldowns immediately
                     const client = clients.find(c => `${c.firstName} ${c.lastName} (${c.city})` === selectedClientStr);
                     const identifier = client?.id || selectedClientStr;
@@ -392,97 +402,115 @@ export default function ExtractionTools() {
 
 
     return (
-        <div className="p-6 md:p-10 space-y-12 max-w-5xl mx-auto">
-
-
-
-            {/* --- Section 2: Client-Specific Extraction --- */}
-            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8">
-                <div className="flex items-start gap-4 pb-4 border-b">
-                    <div className="bg-purple-100 p-3 rounded-2xl text-purple-600">
-                        <Database size={24} />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Client-Specific Extraction</h2>
-                        <p className="text-sm text-gray-500">Discover essential services within a 10km radius of a specific client location.</p>
-                    </div>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <div className="bg-gray-900 p-6 text-white text-center relative shrink-0">
+                    <button 
+                        onClick={onClose}
+                        className="absolute right-6 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-xl transition-all border border-white/20"
+                    >
+                        <X size={20} className="text-white" strokeWidth={3} />
+                    </button>
+                    <h1 className="text-2xl font-black uppercase tracking-tight">Data Extraction Tools</h1>
+                    <p className="text-sm text-gray-400 mt-2 font-medium">Targeted API scraping with enforced data caps.</p>
                 </div>
 
-                <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row gap-4 items-end">
-                        <SearchableSelect
-                            options={clients.map(c => `${c.firstName} ${c.lastName} (${c.city})`)}
-                            value={selectedClientStr}
-                            onChange={setSelectedClientStr}
-                            placeholder={isLoadingClients ? "Loading clients..." : "Search & Select Client..."}
-                            disabled={isExtractingClient || isLoadingClients}
-                            icon={Database}
-                        />
-                        <button
-                            onClick={handleClientExtraction}
-                            disabled={!selectedClientStr || clientCategories.length === 0 || isExtractingClient}
-                            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white px-8 py-3.5 rounded-xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 h-[54px] min-w-[220px]"
-                        >
-                            {isExtractingClient ? (
-                                <><Loader2 size={18} className="animate-spin" /> RUNNING...</>
-                            ) : (
-                                <>EXTRACT NEARBY <ArrowRight size={18} /></>
-                            )}
-                        </button>
-                    </div>
+                {/* Content */}
+                <div className="p-6 md:p-10 space-y-8 overflow-y-auto scrollbar-hide">
+                    {/* --- Section: Client-Specific Extraction --- */}
+                    <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8">
+                        <div className="flex items-start gap-4 pb-4 border-b">
+                            <div className="bg-purple-100 p-3 rounded-2xl text-purple-600 shadow-inner">
+                                <Database size={24} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight">Client-Specific Extraction</h2>
+                                <p className="text-xs text-gray-500 font-medium">Discover essential services within a 10km radius of a specific client location.</p>
+                            </div>
+                        </div>
 
-                    {/* Multi-Select Category Field */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <Filter size={12} /> 3. Service Category (MAX 4)
-                        </label>
-                        <SearchableMultiSelect
-                            options={ALL_CATEGORIES}
-                            selected={clientCategories}
-                            onToggle={(cat) => toggleCategory(clientCategories, setClientCategories, cat)}
-                            placeholder="Search & select up to 5 categories..."
-                            disabled={isExtractingClient}
-                            max={5}
-                            lockedOptions={clientLockedCats}
-                        />
-                    </div>
+                        <div className="space-y-6">
+                            <div className="flex flex-col md:flex-row gap-4 items-end">
+                                <SearchableSelect
+                                    options={clients.map(c => `${c.firstName} ${c.lastName} (${c.city})`)}
+                                    value={selectedClientStr}
+                                    onChange={setSelectedClientStr}
+                                    placeholder={isLoadingClients ? "Loading clients..." : "Search & Select Client..."}
+                                    disabled={isExtractingClient || isLoadingClients}
+                                    icon={Database}
+                                />
+                                <button
+                                    onClick={handleClientExtraction}
+                                    disabled={!selectedClientStr || clientCategories.length === 0 || isExtractingClient}
+                                    className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white px-8 py-3.5 rounded-xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 h-[54px] min-w-[220px] shadow-lg active:scale-95 shadow-purple-200"
+                                >
+                                    {isExtractingClient ? (
+                                        <><Loader2 size={18} className="animate-spin" /> RUNNING...</>
+                                    ) : (
+                                        <>EXTRACT NEARBY <ArrowRight size={18} strokeWidth={3} /></>
+                                    )}
+                                </button>
+                            </div>
 
-                    {/* Progress Bar */}
-                    {isExtractingClient && (
-                        <div className="space-y-3 pt-2">
-                            <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-purple-600 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(147,51,234,0.5)]"
-                                    style={{ width: `${clientProgress}%` }}
+                            {/* Multi-Select Category Field */}
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Filter size={12} strokeWidth={3} /> 3. Service Category (MAX 5)
+                                </label>
+                                <SearchableMultiSelect
+                                    options={ALL_CATEGORIES}
+                                    selected={clientCategories}
+                                    onToggle={(cat) => toggleCategory(clientCategories, setClientCategories, cat)}
+                                    placeholder="Search & select up to 5 categories..."
+                                    disabled={isExtractingClient}
+                                    max={5}
+                                    lockedOptions={clientLockedCats}
                                 />
                             </div>
-                            <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                <span>Checking Nearby Area...</span>
-                                <span>{Math.round(clientProgress)}%</span>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Result Message */}
-                    {clientResult && (
-                        <div className={`p-5 rounded-2xl flex items-start gap-4 border animate-in zoom-in-95 duration-200 ${clientResult.status === 'success' ? 'bg-green-50 border-green-200 text-green-900' :
-                            clientResult.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
-                                'bg-red-50 border-red-200 text-red-900'
-                            }`}>
-                            <div className="mt-1">
-                                {clientResult.status === 'success' ? <CheckCircle2 className="text-green-600" /> :
-                                    clientResult.status === 'warning' ? <AlertTriangle className="text-amber-600" /> :
-                                        <X className="text-red-600 border rounded-full p-0.5" />}
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-black text-sm uppercase tracking-tight">{clientResult.status === 'success' ? 'Extraction Complete' : 'Notice'}</h4>
-                                <p className="text-sm font-medium opacity-80 leading-relaxed">{clientResult.message}</p>
-                            </div>
+                            {/* Progress Bar */}
+                            {isExtractingClient && (
+                                <div className="space-y-3 pt-2">
+                                    <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-purple-600 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(147,51,234,0.5)]"
+                                            style={{ width: `${clientProgress}%` }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        <span>Checking Nearby Area...</span>
+                                        <span>{Math.round(clientProgress)}%</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Result Message */}
+                            {clientResult && (
+                                <div className={`p-5 rounded-2xl flex items-start gap-4 border animate-in zoom-in-95 duration-200 shadow-sm ${clientResult.status === 'success' ? 'bg-green-50 border-green-200 text-green-900' :
+                                    clientResult.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
+                                        'bg-red-50 border-red-200 text-red-900'
+                                    }`}>
+                                    <div className="mt-1">
+                                        {clientResult.status === 'success' ? <CheckCircle2 className="text-green-600" /> :
+                                            clientResult.status === 'warning' ? <AlertTriangle className="text-amber-600" /> :
+                                                <XCircle className="text-red-600" />}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-black text-xs uppercase tracking-tight">{clientResult.status === 'success' ? 'Extraction Complete' : 'Notice'}</h4>
+                                        <p className="text-xs font-bold opacity-80 leading-relaxed mt-1">{clientResult.message}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
+                </div>
+                
+                {/* Footer Info */}
+                <div className="p-4 bg-gray-50 text-center border-t shrink-0">
+                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Administrator Access Enforced • All requests logged</p>
                 </div>
             </div>
-
         </div>
     );
 }
