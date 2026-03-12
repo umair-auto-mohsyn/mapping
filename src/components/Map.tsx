@@ -19,9 +19,9 @@ interface MapProps {
     selectedClient: Client | null;
     filteredServices: Service[];
     allServices: Service[];
+    discoveredServices?: any[];
     radius: number | "ALL";
     onDataUpdate?: (service?: Service) => Promise<any>;
-    liveResults?: any[];
 }
 
 interface DisplayService extends Service {
@@ -48,14 +48,14 @@ function MapCircle({ center, radius }: { center: google.maps.LatLngLiteral; radi
     return null;
 }
 
-export default function Map({ selectedCity, selectedClient, filteredServices, allServices, radius, onDataUpdate, liveResults }: MapProps) {
+export default function Map({ selectedCity, selectedClient, filteredServices, allServices, discoveredServices = [], radius, onDataUpdate }: MapProps) {
     const map = useMap();
     const { viewState, setViewState } = useMapContext();
     const [selectedService, setSelectedService] = useState<DisplayService | null>(null);
+    const [selectedDiscoveredPlace, setSelectedDiscoveredPlace] = useState<any | null>(null);
     const [justAddedId, setJustAddedId] = useState<string | null>(null);
+    const [isEnriching, setIsEnriching] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [addingPlaceId, setAddingPlaceId] = useState<string | null>(null);
-    const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
 
     // Track initialization to avoid over-panning
     const isInitializedRef = useRef(false);
@@ -89,6 +89,12 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
             return { ...service, displayPos: { lat, lng } };
         });
     }, [filteredServices, useImperative]);
+
+    const processedDiscovered = useMemo(() => {
+        // Filter out discovered places that are already in any existing service
+        const allSourceIds = new Set(allServices.map(s => s.source_id));
+        return discoveredServices.filter(p => !allSourceIds.has(p.place_id));
+    }, [discoveredServices, allServices]);
 
 
     // Clustering and Imperative markers
@@ -165,6 +171,47 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
         }
     };
 
+
+    const handleEnrichAndSave = async (place: any) => {
+        setIsEnriching(true);
+        try {
+            // STEP 5 — Fetch Details ONLY ON CLICK
+            const detailsRes = await fetch(`/api/place-details?place_id=${place.place_id}`);
+            const detailsData = await detailsRes.json();
+
+            if (detailsData.error) throw new Error(detailsData.error);
+
+            // STEP 6 — Normalize Data
+            const normalized = normalizeGooglePlace(
+                detailsData.result,
+                place.internalCategory,
+                selectedCity
+            );
+
+            // STEP 7 — Add to Database
+            const saveRes = await fetch("/api/services", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(normalized)
+            });
+
+            if (saveRes.ok) {
+                const saveResult = await saveRes.json();
+                setSelectedDiscoveredPlace(null);
+
+                if (onDataUpdate) {
+                    await onDataUpdate(saveResult.service);
+                    // Set the just added ID to trigger auto-selection in useEffect
+                    setJustAddedId(saveResult.service.source_id);
+                }
+            }
+        } catch (error) {
+            console.error("Enrichment error:", error);
+            alert("Failed to add service to database");
+        } finally {
+            setIsEnriching(false);
+        }
+    };
 
     // Auto-select newly added service
     useEffect(() => {
@@ -291,6 +338,31 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                     );
                 })}
 
+                {/* Discovered Markers (Yellow) - Always React-managed as they are few */}
+                {processedDiscovered.map((place) => {
+                    const key = `discovered-${place.place_id}`;
+                    const displayPos = { lat: place.geometry.location.lat, lng: place.geometry.location.lng };
+                    return (
+                        <Marker
+                            key={key}
+                            ref={(marker) => setMarkerRef(marker, key)}
+                            position={displayPos}
+                            title={place.name}
+                            onClick={() => setSelectedDiscoveredPlace({ ...place, displayPos })}
+                            zIndex={1000}
+                            icon={{
+                                path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+                                fillColor: "#eab308", // yellow-500
+                                fillOpacity: 1,
+                                strokeWeight: 1.5,
+                                strokeColor: "#ffffff",
+                                scale: 1.2,
+                                anchor: { x: 12, y: 22 } as google.maps.Point,
+                            }}
+                        />
+                    );
+                })}
+
                 {/* Paused: Live Discovery Markers (Ghost Pins) */}
                 {/* 
                 {liveResults && liveResults.map((place, index) => {
@@ -369,6 +441,44 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                                             </button>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    </InfoWindow>
+                )}
+
+                {/* Discovered Info Window */}
+                {selectedDiscoveredPlace && (
+                    <InfoWindow
+                        position={selectedDiscoveredPlace.displayPos}
+                        onCloseClick={() => setSelectedDiscoveredPlace(null)}
+                    >
+                        <div className="p-3 max-w-[280px] text-sm">
+                            <div className="flex justify-between items-start border-b pb-1 mb-2">
+                                <h3 className="font-bold text-gray-900 leading-tight">{selectedDiscoveredPlace.name}</h3>
+                                <span className="bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0 ml-2">New</span>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-xs font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md inline-block">
+                                    {selectedDiscoveredPlace.internalCategory}
+                                </p>
+                                <p className="text-[11px] text-gray-600 leading-snug">
+                                    <MapPin size={10} className="inline mr-1" /> {selectedDiscoveredPlace.vicinity}
+                                </p>
+
+                                <div className="pt-2 border-t mt-2">
+                                    <button
+                                        onClick={() => handleEnrichAndSave(selectedDiscoveredPlace)}
+                                        disabled={isEnriching}
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
+                                    >
+                                        {isEnriching ? (
+                                            <><Loader2 size={12} className="animate-spin" /> Adding...</>
+                                        ) : (
+                                            <><Plus size={12} strokeWidth={3} /> Add to Database</>
+                                        )}
+                                    </button>
+                                    <p className="text-[9px] text-gray-400 text-center mt-2 italic font-medium">Click to fetch phone & hours automatically</p>
                                 </div>
                             </div>
                         </div>

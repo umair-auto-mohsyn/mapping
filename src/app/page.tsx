@@ -39,6 +39,7 @@ export default function Home() {
     const [isAdminOpen, setIsAdminOpen] = useState(false);
     const [isExtractionOpen, setIsExtractionOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [discoveredServices, setDiscoveredServices] = useState<any[]>([]);
     const { data: session, status } = useSession();
 
     const { filters, updateFilters, liveResults, setLiveResults } = useMapContext();
@@ -154,13 +155,33 @@ export default function Home() {
         return services;
     }, [data.services, selectedCity, selectedCategories, selectedClient, selectedRadius]);
 
-    /* Paused for now - Interactive Discovery logic
+    // Legacy Discovery Logic
     useEffect(() => {
-        if (filters.interactiveMode && selectedCategories.length > 0 && selectedClient) {
-            // ... discovery logic ...
+        if (selectedClient && selectedCategories.length > 0) {
+            const fetchDiscovery = async () => {
+                try {
+                    const res = await fetch("/api/discover", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            lat: selectedClient.latitude,
+                            lng: selectedClient.longitude,
+                            radius: selectedRadius === "ALL" ? 10 : selectedRadius,
+                            categories: selectedCategories,
+                            city: selectedCity
+                        })
+                    });
+                    const d = await res.json();
+                    if (d.results) setDiscoveredServices(d.results);
+                } catch (e) {
+                    console.error("Discovery failed:", e);
+                }
+            };
+            fetchDiscovery();
+        } else {
+            setDiscoveredServices([]);
         }
-    }, [filters.interactiveMode, selectedCategories, selectedClient, selectedRadius, data.services]);
-    */
+    }, [selectedClient, selectedCategories, selectedRadius, selectedCity]);
 
 
     const resetFilters = () => {
@@ -413,9 +434,9 @@ export default function Home() {
                     selectedClient={selectedClient}
                     filteredServices={filteredServices}
                     allServices={data.services}
+                    discoveredServices={discoveredServices}
                     radius={selectedRadius}
                     onDataUpdate={fetchData}
-                    liveResults={liveResults}
                 />
 
                 {/* Floating Admin Dock - Premium UI refinement */}
