@@ -127,10 +127,8 @@ export default function Home() {
         let services = data.services;
 
         // Filter by city
-        if (selectedCity) {
+        if (selectedCity && selectedCity !== "") {
             services = services.filter((s) => s.city.toLowerCase() === selectedCity.toLowerCase());
-        } else {
-            return []; // Hide markers if no city is selected
         }
 
         // Filter by category
@@ -158,13 +156,15 @@ export default function Home() {
 
 
     const resetFilters = () => {
-        setCitySearch("");
-        setClientSearch("");
-        setCategorySearch("");
-        setSelectedCity("");
-        setSelectedClient(null);
-        setSelectedCategories([]);
-        setSelectedRadius("ALL");
+        updateFilters({
+            citySearch: "",
+            clientSearch: "",
+            categorySearch: "",
+            selectedCity: "",
+            selectedClient: null,
+            selectedCategories: [],
+            selectedRadius: "ALL"
+        });
     };
 
     if (loading) {
