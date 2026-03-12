@@ -31,8 +31,8 @@ interface DisplayService extends Service {
 function MapCircle({ center, radius }: { center: google.maps.LatLngLiteral; radius: number }) {
     const map = useMap();
     useEffect(() => {
-        if (!map) return;
-        const circle = new google.maps.Circle({
+        if (!map || !window.google) return;
+        const circle = new window.google.maps.Circle({
             map,
             center,
             radius: radius * 1000,
@@ -110,7 +110,8 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
 
             // Add new markers directly to clusterer bypass React state
             const newMarkers = filteredServices.map(service => {
-                const marker = new google.maps.Marker({
+                if (!window.google) return null;
+                const marker = new window.google.maps.Marker({
                     position: { lat: service.latitude, lng: service.longitude },
                     title: service.entity_name,
                     icon: {
@@ -120,14 +121,16 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                         strokeWeight: 1.5,
                         strokeColor: "#ffffff",
                         scale: 1.2,
-                        anchor: new google.maps.Point(12, 22),
+                        anchor: { x: 12, y: 22 } as google.maps.Point,
                     }
                 });
-                marker.addListener("click", () => {
-                    setSelectedService({ ...service, displayPos: { lat: service.latitude, lng: service.longitude } });
-                });
+                if (marker) {
+                    marker.addListener("click", () => {
+                        setSelectedService({ ...service, displayPos: { lat: service.latitude, lng: service.longitude } });
+                    });
+                }
                 return marker;
-            });
+            }).filter((m): m is google.maps.Marker => m !== null);
 
             imperativeMarkersRef.current = newMarkers;
             clusterer.addMarkers(newMarkers);
@@ -250,7 +253,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                                 strokeWeight: 2,
                                 strokeColor: "#ffffff",
                                 scale: 2,
-                                anchor: new google.maps.Point(12, 12),
+                                anchor: { x: 12, y: 12 } as google.maps.Point,
                             }}
                         />
                         {radius !== "ALL" && (
@@ -279,7 +282,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                                 strokeWeight: 1.5,
                                 strokeColor: "#ffffff",
                                 scale: 1.2,
-                                anchor: new google.maps.Point(12, 22),
+                                anchor: { x: 12, y: 22 } as google.maps.Point,
                             }}
                         />
                     );
