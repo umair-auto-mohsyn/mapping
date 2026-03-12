@@ -351,12 +351,12 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                             onClick={() => setSelectedDiscoveredPlace({ ...place, displayPos })}
                             zIndex={1000}
                             icon={{
-                                path: "M12 2L2 12l10 10 10-10z", // Diamond Shape
-                                fillColor: "#ec4899", // Hot Pink
+                                path: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-12c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z", // Target/Crosshair Shape
+                                fillColor: "#06b6d4", // Vibrant Cyan
                                 fillOpacity: 0.9,
-                                strokeWeight: 2,
+                                strokeWeight: 1.5,
                                 strokeColor: "#ffffff",
-                                scale: 1.3,
+                                scale: 1.4,
                                 anchor: { x: 12, y: 12 } as google.maps.Point,
                             }}
                         />
@@ -456,7 +456,7 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                         <div className="p-3 max-w-[280px] text-sm">
                             <div className="flex justify-between items-start border-b pb-1 mb-2">
                                 <h3 className="font-bold text-gray-900 leading-tight">{selectedDiscoveredPlace.name}</h3>
-                                <span className="bg-pink-100 text-pink-700 text-[10px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0 ml-2">New</span>
+                                <span className="bg-cyan-100 text-cyan-700 text-[10px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0 ml-2">New</span>
                             </div>
                             <div className="space-y-2">
                                 <p className="text-xs font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md inline-block">
