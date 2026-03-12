@@ -21,6 +21,7 @@ interface MapProps {
     allServices: Service[];
     radius: number | "ALL";
     onDataUpdate?: (service?: Service) => Promise<any>;
+    liveResults?: any[];
 }
 
 interface DisplayService extends Service {
@@ -47,12 +48,14 @@ function MapCircle({ center, radius }: { center: google.maps.LatLngLiteral; radi
     return null;
 }
 
-export default function Map({ selectedCity, selectedClient, filteredServices, allServices, radius, onDataUpdate }: MapProps) {
+export default function Map({ selectedCity, selectedClient, filteredServices, allServices, radius, onDataUpdate, liveResults }: MapProps) {
     const map = useMap();
     const { viewState, setViewState } = useMapContext();
     const [selectedService, setSelectedService] = useState<DisplayService | null>(null);
     const [justAddedId, setJustAddedId] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [addingPlaceId, setAddingPlaceId] = useState<string | null>(null);
+    const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
 
     // Track initialization to avoid over-panning
     const isInitializedRef = useRef(false);
@@ -288,6 +291,42 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                     );
                 })}
 
+                {/* Live Discovery Markers (Ghost Pins) */}
+                {liveResults && liveResults.map((place, index) => {
+                    const key = `live-${place.place_id}-${index}`;
+                    return (
+                        <Marker
+                            key={key}
+                            position={{ lat: place.geometry.location.lat, lng: place.geometry.location.lng }}
+                            title={place.name}
+                            onClick={() => setSelectedService({
+                                source_id: place.place_id,
+                                entity_name: place.name,
+                                address: place.vicinity || place.formatted_address,
+                                latitude: place.geometry.location.lat,
+                                longitude: place.geometry.location.lng,
+                                category: place.types?.[0] || "Unknown",
+                                city: "Live Discovery",
+                                primary_contact: "",
+                                secondary_contact: "",
+                                opening_hours: "",
+                                image_url: "",
+                                data_source: "GOOGLE",
+                                displayPos: { lat: place.geometry.location.lat, lng: place.geometry.location.lng }
+                            } as DisplayService)}
+                            icon={{
+                                path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z", // Pin with hole
+                                fillColor: "#f97316", // Vibrant Orange
+                                fillOpacity: 0.9,
+                                strokeWeight: 2.5,
+                                strokeColor: "#ffffff",
+                                scale: 1.5,
+                                anchor: { x: 12, y: 22 } as google.maps.Point,
+                            }}
+                        />
+                    );
+                })}
+
 
                 {/* Info Window */}
                 {selectedService && (
@@ -320,7 +359,41 @@ export default function Map({ selectedCity, selectedClient, filteredServices, al
                                     </p>
                                 )}
                                 <div className="pt-2 border-t mt-2 flex flex-col gap-2">
-                                    {selectedClient && (
+                                    {/* Discovery Mode: Add to Database */}
+                                    {selectedService.data_source === "GOOGLE" && (
+                                        <button
+                                            onClick={async () => {
+                                                if (!selectedService.source_id) return;
+                                                setAddingPlaceId(selectedService.source_id);
+                                                try {
+                                                    const res = await fetch("/api/tools/extract-client", {
+                                                        method: "POST",
+                                                        headers: { "Content-Type": "application/json" },
+                                                        body: JSON.stringify({
+                                                            placeId: selectedService.source_id,
+                                                            category: selectedService.category
+                                                        })
+                                                    });
+                                                    const result = await res.json();
+                                                    if (result.success) {
+                                                        if (onDataUpdate) await onDataUpdate(result.service);
+                                                    }
+                                                } finally {
+                                                    setAddingPlaceId(null);
+                                                }
+                                            }}
+                                            disabled={addingPlaceId === selectedService.source_id}
+                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                                        >
+                                            {addingPlaceId === selectedService.source_id ? (
+                                                <Loader2 size={14} className="animate-spin" />
+                                            ) : (
+                                                <><Plus size={14} strokeWidth={3} /> Add to Database</>
+                                            )}
+                                        </button>
+                                    )}
+
+                                    {selectedClient && selectedService.data_source !== "GOOGLE" && (
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 onClick={() => {

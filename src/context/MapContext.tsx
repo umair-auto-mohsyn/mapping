@@ -16,6 +16,7 @@ interface MapFilters {
     citySearch: string;
     clientSearch: string;
     categorySearch: string;
+    interactiveMode: boolean;
 }
 
 interface MapContextType {
@@ -24,6 +25,8 @@ interface MapContextType {
     filters: MapFilters;
     setFilters: (filters: MapFilters) => void;
     updateFilters: (updates: Partial<MapFilters>) => void;
+    liveResults: any[];
+    setLiveResults: (results: any[]) => void;
 }
 
 const INITIAL_VIEW_STATE: MapViewState = {
@@ -39,6 +42,7 @@ const INITIAL_FILTERS: MapFilters = {
     citySearch: "",
     clientSearch: "",
     categorySearch: "",
+    interactiveMode: false,
 };
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -60,6 +64,8 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
         return INITIAL_FILTERS;
     });
 
+    const [liveResults, setLiveResults] = useState<any[]>([]);
+
     useEffect(() => {
         sessionStorage.setItem("map_view_state", JSON.stringify(viewState));
     }, [viewState]);
@@ -73,7 +79,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <MapContext.Provider value={{ viewState, setViewState, filters, setFilters, updateFilters }}>
+        <MapContext.Provider value={{ viewState, setViewState, filters, setFilters, updateFilters, liveResults, setLiveResults }}>
             {children}
         </MapContext.Provider>
     );

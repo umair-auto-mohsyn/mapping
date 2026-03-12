@@ -41,7 +41,7 @@ export default function Home() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { data: session, status } = useSession();
 
-    const { filters, updateFilters } = useMapContext();
+    const { filters, updateFilters, liveResults, setLiveResults } = useMapContext();
 
     // Field-specific search states (Now from context)
     const { 
@@ -153,6 +153,34 @@ export default function Home() {
 
         return services;
     }, [data.services, selectedCity, selectedCategories, selectedClient, selectedRadius]);
+
+    // Live Search Trigger
+    useEffect(() => {
+        if (filters.interactiveMode && selectedCategories.length > 0 && selectedClient) {
+            const category = selectedCategories[0];
+            const location = { lat: selectedClient.latitude, lng: selectedClient.longitude };
+            const radiusInMeters = selectedRadius === "ALL" ? 5000 : (Number(selectedRadius) * 1000);
+
+            const performLiveSearch = async () => {
+                try {
+                    const res = await fetch(`/api/tools/extract-client?lat=${location.lat}&lng=${location.lng}&radius=${radiusInMeters}&category=${encodeURIComponent(category)}&dryRun=true`);
+                    const d = await res.json();
+                    if (d.results) {
+                        // Filter out results already in DB
+                        const dbSourceIds = new Set(data.services.map(s => s.source_id));
+                        const newLiveResults = d.results.filter((r: any) => !dbSourceIds.has(r.place_id));
+                        setLiveResults(newLiveResults);
+                    }
+                } catch (e) {
+                    console.error("Live search failed:", e);
+                }
+            };
+
+            performLiveSearch();
+        } else {
+            setLiveResults([]);
+        }
+    }, [filters.interactiveMode, selectedCategories, selectedClient, selectedRadius, data.services]);
 
 
     const resetFilters = () => {
@@ -359,14 +387,22 @@ export default function Home() {
                 </div>
 
                 <div className="p-4 bg-gray-50/50 mt-auto border-t space-y-3">
-                    <div className="flex gap-2">
-                        <div className="bg-red-50 p-2 rounded-xl border border-red-100/50">
-                            <MapPin size={16} className="text-red-500" />
+                    <div className="flex items-center justify-between">
+                        <div className="flex gap-2">
+                            <div className={`p-2 rounded-xl border transition-all ${filters.interactiveMode ? "bg-orange-50 border-orange-100" : "bg-gray-50 border-gray-100"}`}>
+                                <MapPin size={16} className={filters.interactiveMode ? "text-orange-500" : "text-gray-400"} />
+                            </div>
+                            <div className="flex-1 space-y-0.5">
+                                <h3 className="text-[10px] font-black text-gray-900 tracking-tighter uppercase leading-tight">Interactive Mode</h3>
+                                <p className="text-[9px] text-gray-500 font-medium leading-tight">Discover unsaved places</p>
+                            </div>
                         </div>
-                        <div className="flex-1 space-y-1">
-                            <h3 className="text-xs font-black text-gray-900 tracking-tighter uppercase leading-tight">Interactive Mode</h3>
-                            <p className="text-[10px] text-gray-500 font-medium">Click any point on the map to discover new services.</p>
-                        </div>
+                        <button
+                            onClick={() => updateFilters({ interactiveMode: !filters.interactiveMode })}
+                            className={`w-10 h-5 rounded-full relative transition-all duration-300 ${filters.interactiveMode ? "bg-orange-500" : "bg-gray-200"}`}
+                        >
+                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${filters.interactiveMode ? "left-6" : "left-1"}`} />
+                        </button>
                     </div>
 
                     <button
@@ -410,6 +446,7 @@ export default function Home() {
                     allServices={data.services}
                     radius={selectedRadius}
                     onDataUpdate={fetchData}
+                    liveResults={liveResults}
                 />
 
                 {/* Floating Admin Dock - Premium UI refinement */}

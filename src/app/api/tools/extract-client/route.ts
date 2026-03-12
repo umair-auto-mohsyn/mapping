@@ -11,6 +11,51 @@ export const dynamic = "force-dynamic";
 const GMAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAX_CLIENT_RECORDS = 400; // Strict cap for client-specific extraction
 
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const lat = parseFloat(searchParams.get("lat") || "");
+        const lng = parseFloat(searchParams.get("lng") || "");
+        const radius = parseFloat(searchParams.get("radius") || "10000");
+        const category = searchParams.get("category");
+
+        if (!lat || !lng || !category) {
+            return NextResponse.json({ error: "Lat, Lng and Category required" }, { status: 400 });
+        }
+
+        if (!GMAPS_API_KEY) {
+            return NextResponse.json({ error: "API Key missing" }, { status: 500 });
+        }
+
+        const payload = {
+            textQuery: category,
+            languageCode: "en",
+            maxResultCount: 20,
+            locationRestriction: {
+                circle: {
+                    center: { latitude: lat, longitude: lng },
+                    radius: radius
+                }
+            }
+        };
+
+        const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": GMAPS_API_KEY,
+                "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.nationalPhoneNumber,places.regularOpeningHours",
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        return NextResponse.json({ results: data.places || [] });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
 export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
