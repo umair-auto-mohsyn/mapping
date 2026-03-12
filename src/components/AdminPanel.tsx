@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X as CloseIcon, Plus, Trash2, Edit, Search } from "lucide-react";
 import { Client, Service } from "@/types";
 
@@ -16,6 +16,14 @@ export default function AdminPanel({ onClose, clients, services, onDataUpdate }:
     const [editingClient, setEditingClient] = useState<Partial<Client> | null>(null);
     const [editingService, setEditingService] = useState<Partial<Service> | null>(null);
     const [adminSearch, setAdminSearch] = useState("");
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to top when starting an edit/add action
+    useEffect(() => {
+        if ((editingClient || editingService) && scrollRef.current) {
+            scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }, [editingClient, editingService]);
 
     const handleSaveClient = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -109,7 +117,7 @@ export default function AdminPanel({ onClose, clients, services, onDataUpdate }:
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50/30">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50/30">
                     {tab === "clients" ? (
                         <div className="space-y-6">
                             <button
