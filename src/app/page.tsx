@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { Client, Service } from "@/types";
 import { useMapContext } from "@/context/MapContext";
 import { calculateDistance } from "@/lib/utils";
-import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck, LogOut, Wrench } from "lucide-react";
+import { Search, MapPin, Filter, Settings, Plus, RotateCcw, Menu, X as CloseIcon, Check, Truck, LogOut } from "lucide-react";
 import Link from "next/link";
 
 // CATEGORY_COLORS for reference in select
@@ -26,7 +26,6 @@ const Map = dynamic(() => import("@/components/Map"), {
 });
 
 const AdminPanel = dynamic(() => import("@/components/AdminPanel"), { ssr: false });
-const ExtractionTools = dynamic(() => import("@/components/ExtractionTools"), { ssr: false });
 
 export default function Home() {
     const [data, setData] = useState<{ clients: Client[]; services: Service[]; cities: string[]; categories: string[] }>({
@@ -37,7 +36,6 @@ export default function Home() {
     });
     const [loading, setLoading] = useState(true);
     const [isAdminOpen, setIsAdminOpen] = useState(false);
-    const [isExtractionOpen, setIsExtractionOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [discoveredServices, setDiscoveredServices] = useState<any[]>([]);
     const { data: session, status } = useSession();
@@ -444,20 +442,6 @@ export default function Home() {
                     <div className="absolute bottom-24 right-6 z-[1000] flex flex-col items-center">
                         <div className="bg-white/80 backdrop-blur-xl p-2.5 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/60 flex flex-col gap-3 group/dock transition-all duration-500 hover:bg-white/90">
                             <button
-                                onClick={() => setIsExtractionOpen(true)}
-                                className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white rounded-[24px] flex items-center justify-center shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-110 active:scale-95 group relative overflow-hidden"
-                                title="Extraction Tools"
-                            >
-                                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <Wrench size={22} strokeWidth={3} className="relative z-10 transition-transform duration-500 group-hover:rotate-12" />
-                                <span className="absolute right-full mr-6 bg-gray-900/95 backdrop-blur-md text-white text-[10px] font-black py-2.5 px-4 rounded-xl opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap uppercase tracking-widest shadow-2xl border border-white/10">
-                                    Extraction Tools
-                                </span>
-                            </button>
-                            
-                            <div className="h-px w-8 bg-gray-200/50 self-center mx-2" />
-
-                            <button
                                 onClick={() => setIsAdminOpen(true)}
                                 className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-[24px] flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all duration-300 hover:scale-110 active:scale-95 group relative overflow-hidden"
                                 title="Add New Entry"
@@ -481,16 +465,6 @@ export default function Home() {
                         services={data.services || []}
                         onDataUpdate={async () => { 
                             await fetchData();
-                            window.location.reload(); // Restoring full reload behavior as requested
-                        }}
-                    />
-                )}
-
-                {isExtractionOpen && (
-                    <ExtractionTools
-                        onClose={() => setIsExtractionOpen(false)}
-                        onDataUpdate={async () => { 
-                            await fetchData(); 
                             window.location.reload(); // Restoring full reload behavior as requested
                         }}
                     />
